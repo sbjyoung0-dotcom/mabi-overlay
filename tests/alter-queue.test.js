@@ -65,6 +65,41 @@ test('auto: 켜진 즐겨찾기의 완료 건을 수령하고 같은 수만큼 �
   assert.deepEqual(events.map((e) => e.type), ['collecting', 'requeued', 'requeued']);
 });
 
+test('auto: 한 시설에 즐겨찾기 2종이 완료되면 수령은 시설당 1회, 아이템별로 순서대로 재등록', async () => {
+  const { q, calls, config, events } = setup(
+    (command) => (command === 'complete_altering_work' ? accepted({ collected: 3 }) : started),
+    { alterFavorites: [
+      { displayName: '상급 가죽', count: 6, autoRequeue: true },
+      { displayName: '고급 가죽끈', count: 6, autoRequeue: true },
+    ] },
+    { now: () => new Date(2026, 8, 21).getTime() },
+  );
+  await q.handleWorksUpdate(update([
+    work('상급 가죽', '가죽 가공 시설', true),
+    work('상급 가죽', '가죽 가공 시설', true),
+    work('고급 가죽끈', '가죽 가공 시설', true),
+  ]));
+  assert.deepEqual(calls.map((c) => c.command), ['complete_altering_work', 'execute_altering', 'execute_altering', 'execute_altering']);
+  const decode = (c) => JSON.parse(Buffer.from(c.bodyArg.slice(7), 'base64').toString('utf8')).displayName;
+  assert.equal(decode(calls[0]), '상급 가죽'); // complete_altering_work는 그룹의 첫 아이템 이름으로 1회만
+  assert.deepEqual(calls.slice(1).map(decode), ['상급 가죽', '상급 가죽', '고급 가죽끈']);
+  assert.equal(events.filter((e) => e.type === 'paused' || e.type === 'disabled').length, 0);
+  assert.equal(config.get().autoSpentWings.amount, 3 * WINGS_PER_CALL);
+});
+
+test('auto: 수령이 no_completed_work_at_facility로 거부되면 실패로 세지 않고 건너뛴다', async () => {
+  const { q, calls, config, events } = setup(
+    (command) => (command === 'complete_altering_work' ? rejected({ error: 'no_completed_work_at_facility' }) : started),
+    { alterFavorites: [{ displayName: '상급 가죽', count: 6, autoRequeue: true }] },
+  );
+  await q.handleWorksUpdate(update([work('상급 가죽', '가죽 가공 시설', true)]));
+  assert.deepEqual(calls.map((c) => c.command), ['complete_altering_work']);
+  assert.equal(events.filter((e) => e.type === 'paused').length, 0);
+  assert.equal(events.filter((e) => e.type === 'disabled').length, 0);
+  assert.deepEqual(events.filter((e) => e.type === 'skipped').map((e) => e.displayName), ['상급 가죽']);
+  assert.equal(config.get().alterFavorites[0].autoRequeue, true);
+});
+
 test('auto: 꺼진 즐겨찾기나 일시정지 상태면 아무것도 안 한다', async () => {
   const { q, calls } = setup([started], { alterFavorites: [{ displayName: '상급 가죽', count: 6, autoRequeue: false }] });
   await q.handleWorksUpdate(update([work('상급 가죽', '가죽 가공 시설', true)]));

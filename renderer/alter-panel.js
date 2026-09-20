@@ -38,6 +38,7 @@ window.AlterPanel = (() => {
       requeued: () => `자동 재등록 ${e.index}/${e.count} · 오늘 자동 소모 날개 ${e.autoSpentWings.amount}`,
       paused: () => `자동 일시정지(${e.displayName}): ${e.message}`,
       disabled: () => `자동 재가공 해제(${e.displayName}): ${e.message}`,
+      skipped: () => `자동: ${e.displayName} 이미 수령됨`,
     };
     s.textContent = (map[e.type] || (() => ''))();
   }
