@@ -1,0 +1,1 @@
+window.Interact = { init() {}, applyPositions() {} };
