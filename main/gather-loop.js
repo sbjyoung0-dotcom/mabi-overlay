@@ -56,10 +56,14 @@ function createGatherLoop({ cli, lock, onProgress }) {
 
   // 잠금을 거치지 않고 stop_action을 바로 보낸다 — 진행 중인 채집을 게임에서 멈추게 하기 위해
   async function stop() {
-    if (!state) return;
+    if (!state) return false;
     state.stopRequested = true;
     emit({ status: 'stopping' });
-    await cli.run('stop_action');
+    const r = await cli.run('stop_action');
+    if (!r.ok && state) {
+      emit({ status: 'stopping', lastMessage: `중지 요청 실패: ${r.message || r.error || r.kind}` });
+    }
+    return r.ok;
   }
 
   return { start, stop, isRunning: () => state !== null };

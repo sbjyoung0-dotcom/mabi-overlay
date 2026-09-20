@@ -74,6 +74,29 @@ test('loop.stop: stop_action을 즉시 호출하고 다음 회차를 시작하�
   assert.deepEqual(calls.map((c) => c.command), ['execute_gathering', 'stop_action']);
 });
 
+test('loop.stop: stop_action 거부되면 false 반환, 진행 이벤트에 실패 메시지', async () => {
+  let release;
+  const gate = new Promise((r) => { release = r; });
+  const { spawn, calls } = createFakeSpawn((command) => (command === 'execute_gathering'
+    ? { ...accepted({ result: 'completed', gained: 100, target: 100 }), wait: gate }
+    : rejected({ error: 'no_action', message: 'nothing to stop' })));
+  const cli = createCli({ cliPath: 'X:\\cli.exe', spawn });
+  const events = [];
+  const loop = createGatherLoop({ cli, lock: createLock(), onProgress: (p) => events.push(p) });
+  const done = loop.start({ displayName: '통나무', repeat: 5 });
+  await new Promise((r) => setImmediate(r));
+  assert.equal(loop.isRunning(), true);
+  const stopped = await loop.stop();
+  assert.equal(stopped, false);
+  const stoppingEvent = events.find((e) => e.status === 'stopping' && e.lastMessage);
+  assert(stoppingEvent);
+  assert.match(stoppingEvent.lastMessage, /중지 요청 실패/);
+  release();
+  const s = await done;
+  assert.equal(s.reason, 'user_stop');
+  assert.deepEqual(calls.map((c) => c.command), ['execute_gathering', 'stop_action']);
+});
+
 test('loop: 실행 중 start는 거부', async () => {
   let release;
   const gate = new Promise((r) => { release = r; });
