@@ -76,9 +76,10 @@
   $('btn-quit').addEventListener('click', () => M.invoke(CH.WINDOW_QUIT));
   $('btn-settings').addEventListener('click', () => Settings.open(config, setConfig));
   $('btn-settings-close').addEventListener('click', () => Settings.close());
+  const CONN_TEXT = { game_off: '게임을 실행하세요', option_off: '설정에서 MM AI 에이전트를 켜세요', cli_missing: 'CLI 없음: MABINOGI_CLI_PATH 설정' };
   M.on(CH.EV_CONN, (s) => {
     const b = $('badge-conn');
-    b.textContent = s.connected ? '' : `연결 없음: ${s.reason}`;
+    b.textContent = s.connected ? '' : (CONN_TEXT[s.reason] || `연결 없음: ${s.reason}`);
     b.classList.toggle('hidden', s.connected);
   });
   M.on(CH.EV_GATHER, (p) => { GatherPanel.renderProgress(p, gameStatus); renderButtons(); if (p.done) refreshStatus(); });
