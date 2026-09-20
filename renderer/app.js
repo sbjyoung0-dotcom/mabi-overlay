@@ -74,7 +74,7 @@
   $('btn-layout').addEventListener('click', () => setConfig({ layout: config.layout === '1row' ? '2row' : '1row' }));
   $('btn-lock').addEventListener('click', () => setConfig({ locked: !config.locked }));
   $('btn-quit').addEventListener('click', () => M.invoke(CH.WINDOW_QUIT));
-  $('btn-settings').addEventListener('click', () => Settings.open(config, setConfig));
+  $('btn-settings').addEventListener('click', () => Settings.open(() => config, setConfig));
   $('btn-settings-close').addEventListener('click', () => Settings.close());
   const CONN_TEXT = { game_off: '게임을 실행하세요', option_off: '설정에서 MM AI 에이전트를 켜세요', cli_missing: 'CLI 없음: MABINOGI_CLI_PATH 설정' };
   M.on(CH.EV_CONN, (s) => {
@@ -84,7 +84,7 @@
   });
   M.on(CH.EV_GATHER, (p) => { GatherPanel.renderProgress(p, gameStatus); renderButtons(); if (p.done) refreshStatus(); });
   M.on(CH.EV_ALTER, (p) => { AlterPanel.renderProgress(p); renderButtons(); if (!p.running) refreshStatus(); });
-  M.on(CH.EV_AUTO, async (e) => { AlterPanel.renderAutoEvent(e); if (e.type === 'disabled') { config = await M.invoke(CH.CONFIG_GET); rerender(); } });
+  M.on(CH.EV_AUTO, async (e) => { AlterPanel.renderAutoEvent(e); if (e.type === 'disabled') { config = await M.invoke(CH.CONFIG_GET); rerender(); Settings.refresh(); } });
   $('btn-auto').addEventListener('click', async () => {
     autoPaused = await M.invoke(CH.AUTO_PAUSE, !autoPaused);
     $('btn-auto').classList.toggle('paused', autoPaused);

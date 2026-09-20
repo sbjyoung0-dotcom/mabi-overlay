@@ -1,6 +1,7 @@
 // ⚙ 설정: 채집/가공 즐겨찾기 추가·삭제, 자동 재가공 토글, 시설 표시.
 window.Settings = (() => {
   const $ = (id) => document.getElementById(id);
+  let getConfig = null;
   let cfg = null;
   let save = null;
 
@@ -20,6 +21,7 @@ window.Settings = (() => {
   const clamp = (v, lo, hi, dflt) => Math.max(lo, Math.min(hi, Number(v) || dflt));
 
   function render() {
+    cfg = getConfig();
     const root = $('settings-body');
     root.replaceChildren();
 
@@ -68,13 +70,16 @@ window.Settings = (() => {
     root.append(facRow);
   }
 
-  function open(config, saveFn) {
-    cfg = config;
-    save = async (patch) => { cfg = await saveFn(patch); render(); };
+  // getConfigFn: 저장할 때마다 최신 config를 다시 읽어온다 (열려 있는 동안 밖에서 config가 바뀔 수 있으므로 cfg를 캐시하지 않는다)
+  function open(getConfigFn, saveFn) {
+    getConfig = getConfigFn;
+    save = async (patch) => { await saveFn(patch); render(); };
     render();
     $('settings').classList.remove('hidden');
   }
   function close() { $('settings').classList.add('hidden'); }
+  // 모달이 열려 있을 때만 다시 그린다 (EV_AUTO로 config가 바뀐 뒤 호출)
+  function refresh() { if (!$('settings').classList.contains('hidden')) render(); }
 
-  return { open, close };
+  return { open, close, refresh };
 })();
