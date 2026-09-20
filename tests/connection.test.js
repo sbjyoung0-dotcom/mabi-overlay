@@ -47,3 +47,18 @@ test('report: 폴러가 본 disconnected를 반영', async () => {
   m.report({ ok: false, kind: 'rejected' });
   assert.equal(changes.length, 2);
 });
+
+test('report: parse_error 3회 연속이면 배지를 띄우고, 그 뒤 disconnected는 계속 반영된다', async () => {
+  const { m, changes } = mon([{ stdout: '{"pipe":"connected"}' }]);
+  await m.check();
+  m.report({ ok: false, kind: 'parse_error' });
+  assert.equal(changes.length, 1);
+  m.report({ ok: false, kind: 'parse_error' });
+  assert.equal(changes.length, 1);
+  m.report({ ok: false, kind: 'parse_error' });
+  assert.deepEqual(changes.at(-1), { connected: false, reason: 'parse_error' });
+  assert.equal(changes.length, 2);
+  m.report({ ok: false, kind: 'disconnected', reason: 'game_off' });
+  assert.deepEqual(changes.at(-1), { connected: false, reason: 'game_off' });
+  assert.equal(changes.length, 3);
+});

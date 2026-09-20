@@ -100,3 +100,19 @@ test('createCli.run: spawn ENOENT → cli_missing', async () => {
   const { spawn } = createFakeSpawn([{ error: err }]);
   assert.equal((await createCli({ cliPath: 'X:\\cli.exe', spawn }).run('status')).kind, 'cli_missing');
 });
+
+test('killCurrent: 실행 중인 CLI를 죽이면 close 3(취소)으로 분류된다', async () => {
+  // wait를 영영 안 풀리는 프로미스로 둬서 가짜 spawn이 스스로 close를 보내지 않게 하고,
+  // 오직 child.kill() (killCurrent가 부르는)만 close(3)을 유발하는지 확인한다.
+  const { spawn } = createFakeSpawn([{ stdout: '{"pipe":"connected"}', wait: new Promise(() => {}) }]);
+  const cli = createCli({ cliPath: 'X:\\cli.exe', spawn });
+  const p = cli.run('status');
+  cli.killCurrent();
+  const r = await p;
+  assert.equal(r.kind, 'canceled');
+});
+
+test('killCurrent: 실행 중인 게 없으면 아무 일도 하지 않는다', () => {
+  const cli = createCli({ cliPath: 'X:\\cli.exe', spawn: () => { throw new Error('spawn이 호출되면 안 된다'); } });
+  assert.doesNotThrow(() => cli.killCurrent());
+});

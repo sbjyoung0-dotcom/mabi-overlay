@@ -13,6 +13,7 @@ const { registerIpc } = require('./ipc');
 
 let win = null;
 let fullClickThrough = false;
+let cli = null; // before-quit에서 진행 중인 CLI 프로세스를 죽이기 위해 모듈 스코프로 둔다
 
 function createWindow() {
   const { width, height } = screen.getPrimaryDisplay().bounds;
@@ -40,7 +41,7 @@ function toggleFullClickThrough() {
 
 app.whenReady().then(() => {
   const config = createConfig({ filePath: path.join(app.getPath('appData'), 'mabi-overlay', 'config.json') });
-  const cli = createCli({ cliPath: findCliPath() });
+  cli = createCli({ cliPath: findCliPath() });
   const lock = createLock();
   const send = (ch, data) => { if (win && !win.isDestroyed()) win.webContents.send(ch, data); };
 
@@ -59,5 +60,6 @@ app.whenReady().then(() => {
   win.webContents.on('did-finish-load', () => { conn.start(); poller.start(); });
 });
 
+app.on('before-quit', () => { if (cli) cli.killCurrent(); });
 app.on('will-quit', () => globalShortcut.unregisterAll());
 app.on('window-all-closed', () => app.quit());

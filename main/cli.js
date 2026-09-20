@@ -52,6 +52,8 @@ function classify(exitCode, parsed) {
 }
 
 function createCli({ cliPath, spawn = childProcess.spawn } = {}) {
+  let current = null; // 지금 실행 중인 자식 프로세스. 종료 시 killCurrent()로 정리한다.
+
   function run(command, body) {
     return new Promise((resolve) => {
       if (!cliPath) { resolve({ ok: false, kind: 'cli_missing', exitCode: null, body: null }); return; }
@@ -60,22 +62,33 @@ function createCli({ cliPath, spawn = childProcess.spawn } = {}) {
       if (encoded !== undefined) args.push(encoded);
       let child;
       try {
-        child = spawn(cliPath, args, { windowsHide: true });
+        // stderr는 읽지 않고 버린다 — 파이프가 가득 차 자식이 블록되는 것을 막는다.
+        child = spawn(cliPath, args, { windowsHide: true, stdio: ['ignore', 'pipe', 'ignore'] });
       } catch (err) {
         resolve({ ok: false, kind: 'cli_missing', exitCode: null, body: null, message: err.message });
         return;
       }
+      current = child;
       const chunks = [];
       child.stdout.on('data', (c) => chunks.push(c));
       child.on('error', (err) => {
+        if (current === child) current = null;
         resolve({ ok: false, kind: err.code === 'ENOENT' ? 'cli_missing' : 'error', exitCode: null, body: null, message: err.message });
       });
       child.on('close', (code) => {
+        if (current === child) current = null;
         resolve(classify(code, parseStdout(Buffer.concat(chunks).toString('utf8'))));
       });
     });
   }
-  return { run, cliPath };
+
+  // 종료(before-quit) 시 진행 중인 CLI 호출을 정리한다. 실행 중인 게 없으면 아무 일도 안 한다.
+  function killCurrent() {
+    if (!current) return;
+    try { current.kill(); } catch { /* 이미 종료됐거나 kill 실패 — 무시 */ }
+  }
+
+  return { run, cliPath, killCurrent };
 }
 
 module.exports = { DEFAULT_PATHS, findCliPath, encodeBody, parseStdout, classify, createCli };
