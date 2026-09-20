@@ -39,13 +39,13 @@ mabi-overlay/
 │  │               응답은 %LOCALAPPDATA%\MabinogiMobileCLI\last-response.json(UTF-8)을 우선 읽고,
 │  │               없으면 stdout을 JSON.parse.
 │  ├─ altering.js  3초 주기 get_altering_works 폴링. 채집 루프 중에는 폴링 정지.
-│  ├─ gather.js    채집 루프 상태기계. 한 번에 하나만 실행.
+│  ├─ gather-loop.js 채집 루프 상태기계. 한 번에 하나만 실행.
 │  ├─ config.js    %APPDATA%\mabi-overlay\config.json 읽기/쓰기.
 │  └─ ipc.js       렌더러 ↔ 메인 채널 정의.
 └─ renderer/
    ├─ index.html
    ├─ altering.js  가공 HUD
-   ├─ gather.js    즐겨찾기 버튼 + 진행 패널
+   ├─ gather-panel.js 즐겨찾기 버튼 + 진행 패널
    ├─ settings.js  ⚙ 패널
    └─ interact.js  위젯 영역 hover 감지 → 메인에 setIgnoreMouseEvents 토글 요청, F8 처리
 ```
@@ -129,7 +129,7 @@ CLI 종료코드: 0 성공(단, 바디의 status/error 별도 확인), 2 사용�
 
 ## 검증
 
-- 단위 테스트(node:test): `cli.js`(경로 탐색, base64 인코딩, 종료코드/응답 분류), `gather.js`(completed 연속, overweight 중단, blocked 중단, timeout 계속, 사용자 중단). CLI는 가짜 실행 파일(스크립트)로 대체.
+- 단위 테스트(node:test): `cli.js`(경로 탐색, base64 인코딩, 종료코드/응답 분류), `gather-loop.js`(completed 연속, overweight 중단, blocked 중단, timeout 계속, 사용자 중단). CLI는 가짜 실행 파일(스크립트)로 대체.
 - 수동 검증: 게임 실행 상태에서 (1) 가공 슬롯 표시와 수령 1회, (2) 채집 1회(날개 5개 소모 — 실행 전 사용자에게 알림), (3) F8·드래그·잠금, (4) 게임 종료 시 배지 전환.
 
 ## 결과물
