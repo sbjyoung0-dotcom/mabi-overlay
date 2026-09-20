@@ -39,7 +39,7 @@ function registerIpc({ ipcMain, services }) {
 
   h(CH.LIST_GATHERABLE, async () => listOf(await lock.run(PRIORITY.MANUAL, () => cli.run('get_gatherable_items'))));
   h(CH.LIST_ALTERABLE, async () => listOf(await lock.run(PRIORITY.MANUAL, () => cli.run('get_alterable_items'))));
-  h(CH.STATUS_GET, () => fetchGameStatus({ cli, lock }));
+  h(CH.STATUS_GET, ({ fresh } = {}) => fetchGameStatus({ cli, lock, priority: fresh ? PRIORITY.MANUAL : undefined }));
 
   h(CH.WINDOW_INTERACTIVE, (on) => { setInteractive(!!on); return true; });
   h(CH.WINDOW_QUIT, () => { quit(); return true; });

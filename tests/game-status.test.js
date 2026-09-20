@@ -27,3 +27,18 @@ test('fetchGameStatus: 잠금이 바쁘면 null', async () => {
   assert.equal(await fetchGameStatus({ cli, lock }), null);
   await hold;
 });
+
+test('fetchGameStatus: priority를 주면 잠금이 바빠도 기다렸다가 최신 값을 반환한다', async () => {
+  const lock = createLock();
+  let release;
+  const hold = lock.run(PRIORITY.GATHER, () => new Promise((r) => { release = r; }));
+  const { spawn } = createFakeSpawn((command) => (command === 'get_currencies'
+    ? { stdout: '[{"DisplayName":"정령의 날개","Amount":50}]' }
+    : { stdout: '{"CurrentInventoryWeightAsDecimal":1449,"MaxInventoryWeightAsDecimal":1700}' }));
+  const cli = createCli({ cliPath: 'X:\\cli.exe', spawn });
+  const p = fetchGameStatus({ cli, lock, priority: PRIORITY.MANUAL });
+  await new Promise((r) => setTimeout(r, 10));
+  release();
+  await hold;
+  assert.deepEqual(await p, { wings: 50, weight: { current: 1449, max: 1700 } });
+});

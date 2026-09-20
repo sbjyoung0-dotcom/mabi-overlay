@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const CH = require('../shared/channels');
 const { registerIpc, listOf } = require('../main/ipc');
 const { createCli } = require('../main/cli');
-const { createLock } = require('../main/cli-lock');
+const { createLock, PRIORITY } = require('../main/cli-lock');
 const { createFakeSpawn } = require('./helpers/fake-spawn');
 const { createMemoryConfig } = require('./helpers/memory-config');
 
@@ -29,7 +29,7 @@ function setup(responses) {
   };
   const { handlers, ipcMain } = fakeIpcMain();
   registerIpc({ ipcMain, services });
-  return { handlers, calls, config, log };
+  return { handlers, calls, config, log, lock };
 }
 
 test('모든 renderer→main 채널에 핸들러가 등록된다', () => {
@@ -69,6 +69,19 @@ test('lists: 정상/연결 없음', async () => {
   const off = setup([{ stdout: '{"pipe":"disconnected","reason":"game_off"}', exitCode: 5 }]);
   const r = await off.handlers[CH.LIST_ALTERABLE]();
   assert.equal(r.items, null); assert.match(r.message, /게임 연결/);
+});
+
+test('STATUS_GET: fresh:true는 잠금이 바빠도 기다렸다가 값을 반환한다', async () => {
+  const { handlers, lock } = setup((command) => (command === 'get_currencies'
+    ? { stdout: '[{"DisplayName":"정령의 날개","Amount":10}]' }
+    : { stdout: '{"CurrentInventoryWeightAsDecimal":1,"MaxInventoryWeightAsDecimal":2}' }));
+  let release;
+  const hold = lock.run(PRIORITY.GATHER, () => new Promise((r) => { release = r; }));
+  const p = handlers[CH.STATUS_GET]({ fresh: true });
+  await new Promise((r) => setTimeout(r, 10));
+  release();
+  await hold;
+  assert.deepEqual(await p, { wings: 10, weight: { current: 1, max: 2 } });
 });
 
 test('listOf: 배열 응답도 items로', () => {

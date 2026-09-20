@@ -12,9 +12,10 @@
   let gameStatus = null;
   let autoPaused = false;
 
-  async function refreshStatus() {
-    if (GatherPanel.isRunning() || AlterPanel.isRunning()) return;
-    const s = await M.invoke(CH.STATUS_GET);
+  // fresh=true면(확인창 직전) 잠금이 바빠도 기다렸다가 최신 값을 받는다. 그 외(30초 주기, 루프 종료 후)는 바쁘면 건너뛴다.
+  async function refreshStatus(fresh = false) {
+    if (!fresh && (GatherPanel.isRunning() || AlterPanel.isRunning())) return;
+    const s = await M.invoke(CH.STATUS_GET, { fresh });
     if (s) gameStatus = s;
   }
 
@@ -28,7 +29,7 @@
 
   async function startGather(fav) {
     if (busy()) return;
-    await refreshStatus();
+    await refreshStatus(true);
     const list = await M.invoke(CH.LIST_GATHERABLE);
     const item = list.items ? list.items.find((i) => i.DisplayName === fav.displayName) : null;
     let warn = '';
@@ -43,7 +44,7 @@
 
   async function startAlter(fav) {
     if (busy()) return;
-    await refreshStatus();
+    await refreshStatus(true);
     const list = await M.invoke(CH.LIST_ALTERABLE);
     const item = list.items ? list.items.find((i) => i.DisplayName === fav.displayName) : null;
     const per = item && item.ProducedPerWork ? ` (예상 ${item.ProducedPerWork * fav.count}개)` : '';
