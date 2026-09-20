@@ -22,6 +22,12 @@ test('interpret: timeout은 계속, blocked/overweight/stopped는 정지', () =>
   assert.equal(interpretGatherResult({ ok: true, body: { result: 'stopped', gained: 12 } }).reason, 'stopped');
 });
 
+test('interpret: started는 반복할 수 없으므로 정지', () => {
+  const it = interpretGatherResult({ ok: true, body: { result: 'started' } });
+  assert.equal(it.action, 'stop');
+  assert.equal(it.reason, 'started');
+});
+
 test('interpret: rejected/disconnected는 정지', () => {
   assert.equal(interpretGatherResult({ ok: false, kind: 'rejected', error: 'not_enough_currency' }).message, '정령의 날개 부족');
   assert.equal(interpretGatherResult({ ok: false, kind: 'disconnected', reason: 'game_off' }).reason, 'disconnected');
@@ -47,6 +53,14 @@ test('loop: 2회차 overweight면 거기서 멈춘다', async () => {
   const cli = createCli({ cliPath: 'X:\\cli.exe', spawn });
   const s = await createGatherLoop({ cli, lock: createLock(), onProgress: () => {} }).start({ displayName: '통나무', repeat: 5 });
   assert.equal(calls.length, 2); assert.equal(s.reason, 'overweight'); assert.equal(s.gainedTotal, 140); assert.equal(s.i, 2);
+});
+
+test('loop: 첫 응답이 started(즉시 시작형)면 1회만 호출하고 멈춘다', async () => {
+  const { spawn, calls } = createFakeSpawn([accepted({ result: 'started', cost: '5 spent' })]);
+  const cli = createCli({ cliPath: 'X:\\cli.exe', spawn });
+  const s = await createGatherLoop({ cli, lock: createLock(), onProgress: () => {} }).start({ displayName: '낚시', repeat: 3 });
+  assert.equal(calls.filter((c) => c.command === 'execute_gathering').length, 1);
+  assert.equal(s.reason, 'started');
 });
 
 test('loop: 첫 호출이 rejected면 0회', async () => {

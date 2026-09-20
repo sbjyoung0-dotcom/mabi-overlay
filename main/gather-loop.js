@@ -6,6 +6,7 @@ const STOP_MESSAGES = {
   not_enough_currency: '정령의 날개 부족', no_route: '경로 없음', not_in_field: '필드가 아님',
   required_consumable_missing: '필요 소모품 없음', insufficient_living_skill_level: '생활 스킬 레벨 부족',
   not_found: '아이템 없음', cost_payment_failed: '날개 결제 실패',
+  unknown_command: '게임이 이 명령을 지원하지 않습니다 — 게임 업데이트 확인',
 };
 
 // execute_gathering 한 번의 결과 → 루프를 계속할지
@@ -21,6 +22,7 @@ function interpretGatherResult(r) {
   if (b.error === 'blocked') return { action: 'stop', reason: 'blocked', message: `게임 화면 확인 필요: ${b.kind || ''}`.trim(), gained, cost: b.cost };
   if (b.error) return { action: 'stop', reason: b.error, message: STOP_MESSAGES[b.error] || b.message || b.error, gained, cost: b.cost };
   if (b.result === 'stopped') return { action: 'stop', reason: 'stopped', message: b.message || '중지됨', gained, cost: b.cost };
+  if (b.result === 'started') return { action: 'stop', reason: 'started', message: '즉시 시작형 행동(낚시 등)은 반복할 수 없음 — 게임에서 직접 중지하세요', gained, cost: b.cost };
   return { action: 'continue', reason: 'completed', message: '', gained, target: b.target, cost: b.cost };
 }
 
