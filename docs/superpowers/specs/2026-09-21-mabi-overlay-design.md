@@ -38,8 +38,8 @@ mabi-overlay/
 │  │               skipTaskbar, 전체 화면 크기. setIgnoreMouseEvents(true,{forward:true}) 기본.
 │  ├─ cli.js       CLI 래퍼. 경로 탐색(MABINOGI_CLI_PATH → C:/D:/E:\Nexon\MabinogiMobile\).
 │  │               run(command, body) → {exitCode, json}. 비ASCII 바디는 base64: 접두.
-│  │               응답은 %LOCALAPPDATA%\MabinogiMobileCLI\last-response.json(UTF-8)을 우선 읽고,
-│  │               없으면 stdout을 JSON.parse.
+│  │               응답은 stdout을 JSON.parse (\uXXXX 이스케이프는 파서가 복원).
+│  │               last-response.json은 다른 CLI 호출자(MoFo 등)가 덮어쓸 수 있어 쓰지 않는다.
 │  ├─ altering.js  3초 주기 get_altering_works 폴링. 채집 루프 중에는 폴링 정지.
 │  ├─ gather-loop.js 채집 루프 상태기계.
 │  ├─ alter-queue.js 가공 즐겨찾기 등록 루프 + 자동 재가공.
@@ -70,6 +70,8 @@ mabi-overlay/
 | `execute_altering` `{displayName}` | 가공 1건 큐 등록 | 이동 포함 블로킹. 호출당 정령의 날개 5개. N건이면 N회 호출. 에러: not_enough_ingredient, not_available(큐 가득), not_enough_currency, requires_user_interaction, blocked, not_in_field 등 |
 | `get_currencies` | 날개 잔량 | 패널 갱신용 |
 | `get_inventory` | 무게 현재/최대 | 패널 갱신용 |
+
+응답 형태(2026-09-21 실측): 조회 명령(`get_*`, `status`)은 바디 객체/배열을 그대로 출력. 행동 명령(`execute_*`, `complete_*`, `stop_action`)은 `{status: accepted|rejected|invalid_body, body: {...}}`. `status` 명령은 `{pipe: connected|disconnected, reason?}`.
 
 CLI 종료코드: 0 성공(단, 바디의 status/error 별도 확인), 2 사용법 오류, 3 취소, 4 미지원 명령, 5 연결 없음.
 
@@ -146,6 +148,8 @@ CLI 종료코드: 0 성공(단, 바디의 status/error 별도 확인), 2 사용�
 - CLI 실행 파일을 못 찾으면 배지 "CLI 없음: MABINOGI_CLI_PATH 설정" 표시.
 - exit 4 → `capabilities` 재조회 1회 후 재시도, 그래도 4면 해당 기능 버튼 비활성.
 - JSON 파싱 실패 → 해당 폴링 건너뜀, 연속 3회 실패 시 배지.
+- 한글 바디는 항상 `base64:` 접두로 전송. 응답은 stdout JSON.parse — 조회 명령은 바디를 그대로, 행동 명령은 `{status, body}` 래퍼로 오므로 둘 다 처리.
+- MoFo 등 다른 CLI 호출자와 동시에 띄우면 게임 쪽 응답이 섞일 수 있으므로 실행 안내에 "MoFo를 끄고 실행"을 명시.
 - 자식 프로세스는 렌더러가 아닌 메인에서만 실행하고, 종료 시 진행 중인 CLI 프로세스를 정리한다.
 
 ## 설정 파일
