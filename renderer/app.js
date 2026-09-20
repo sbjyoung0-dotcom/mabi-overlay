@@ -74,6 +74,8 @@
   $('btn-layout').addEventListener('click', () => setConfig({ layout: config.layout === '1row' ? '2row' : '1row' }));
   $('btn-lock').addEventListener('click', () => setConfig({ locked: !config.locked }));
   $('btn-quit').addEventListener('click', () => M.invoke(CH.WINDOW_QUIT));
+  $('btn-settings').addEventListener('click', () => Settings.open(config, setConfig));
+  $('btn-settings-close').addEventListener('click', () => Settings.close());
   M.on(CH.EV_CONN, (s) => {
     const b = $('badge-conn');
     b.textContent = s.connected ? '' : `연결 없음: ${s.reason}`;
