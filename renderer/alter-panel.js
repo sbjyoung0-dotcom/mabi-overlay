@@ -1,7 +1,7 @@
 window.AlterPanel = (() => {
   let running = false;
 
-  function renderButtons(config, onStart) {
+  function renderButtons(config, onStart, disabled) {
     const row = document.getElementById('alter-buttons');
     row.replaceChildren();
     if (config.alterFavorites.length === 0) {
@@ -12,7 +12,7 @@ window.AlterPanel = (() => {
       row.append(UI.el('button', {
         class: 'btn fav', text: `${f.displayName} ×${f.count}건${f.autoRequeue ? ' 🔁' : ''}`,
         title: `정령의 날개 ${f.count * 5}개${f.autoRequeue ? ' · 자동 재가공 켜짐' : ''}`,
-        disabled: running, onclick: () => onStart(f),
+        disabled: running || disabled, onclick: () => onStart(f),
       }));
     }
   }

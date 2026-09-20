@@ -24,7 +24,7 @@ window.AlteringHud = (() => {
     return dots;
   }
 
-  function render(update, config, onCollect) {
+  function render(update, config, onCollect, disabled) {
     const body = document.getElementById('altering-body');
     body.className = `facility-grid ${config.layout === '1row' ? 'rows-1' : 'rows-2'}`;
     body.replaceChildren();
@@ -38,7 +38,7 @@ window.AlteringHud = (() => {
         ? UI.el('button', {
             class: 'btn collect', text: `완료 ${g.completed.length}`,
             title: `${g.completed.length}개 완료됨 - 클릭하여 수령`,
-            onclick: (e) => { e.stopPropagation(); onCollect(g.completed[0].DisplayName); },
+            disabled, onclick: (e) => { e.stopPropagation(); onCollect(g.completed[0].DisplayName); },
           })
         : UI.el('span', { class: 'sub', text: inProg ? UI.fmtTime(inProg.RemainingSeconds) : (g.works.length ? '대기' : '-') });
       body.append(UI.el('div', { class: 'facility', style: `border-color:${f.color}` }, [

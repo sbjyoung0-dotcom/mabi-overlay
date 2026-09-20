@@ -1,7 +1,7 @@
 window.GatherPanel = (() => {
   let running = false;
 
-  function renderButtons(config, onStart) {
+  function renderButtons(config, onStart, disabled) {
     const row = document.getElementById('gather-buttons');
     row.replaceChildren();
     if (config.gatherFavorites.length === 0) {
@@ -12,7 +12,7 @@ window.GatherPanel = (() => {
       row.append(UI.el('button', {
         class: 'btn fav', text: `${f.displayName} ×${f.repeat}`,
         title: `최대 ${f.repeat * 100}개 · 정령의 날개 ${f.repeat * 5}개`,
-        disabled: running, onclick: () => onStart(f),
+        disabled: running || disabled, onclick: () => onStart(f),
       }));
     }
   }
