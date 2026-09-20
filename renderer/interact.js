@@ -50,6 +50,9 @@ window.Interact = (() => {
     M.on(CH.EV_CLICKTHROUGH, (on) => {
       document.getElementById('clickthrough-banner').classList.toggle('hidden', !on);
       document.body.classList.toggle('clickthrough', on);
+      // F8로 완전 관통이 꺼지면 메인 쪽 setInteractive는 무시된 상태였을 수 있으므로
+      // interactive를 false로 되돌려 다음 mousemove가 위젯 위에서 다시 WINDOW_INTERACTIVE true를 보내게 한다.
+      if (!on) interactive = false;
     });
   }
 
