@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>mabi-overlay</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="clickthrough-banner" class="hidden">F8 완전 관통 모드 — 다시 F8로 해제</div>
+
+  <section class="widget" id="w-altering" data-widget="altering">
+    <header class="widget-header">
+      <span class="title">가공 현황</span>
+      <span id="badge-collectable" class="badge hidden"></span>
+      <span id="badge-conn" class="badge badge-warn hidden"></span>
+      <span class="spacer"></span>
+      <button id="btn-auto" class="icon-btn" title="자동 재가공 일시정지/재개">🔁<span id="auto-count"></span></button>
+      <button id="btn-layout" class="icon-btn" title="1행/2행 전환">▤</button>
+      <button id="btn-lock" class="icon-btn" title="위치 잠금/이동">🔒</button>
+      <button id="btn-settings" class="icon-btn" title="설정">⚙</button>
+      <button id="btn-quit" class="icon-btn" title="종료">✕</button>
+    </header>
+    <div id="altering-body" class="facility-grid rows-2"></div>
+    <div id="altering-msg" class="msg hidden"></div>
+  </section>
+
+  <section class="widget" id="w-gather" data-widget="gather">
+    <header class="widget-header"><span class="title">채집</span><span class="spacer"></span><span id="gather-status" class="sub"></span></header>
+    <div id="gather-buttons" class="btn-row"></div>
+    <div id="gather-progress" class="progress hidden"></div>
+  </section>
+
+  <section class="widget" id="w-alter" data-widget="alter">
+    <header class="widget-header"><span class="title">가공 등록</span><span class="spacer"></span><span id="alter-status" class="sub"></span></header>
+    <div id="alter-buttons" class="btn-row"></div>
+    <div id="alter-progress" class="progress hidden"></div>
+  </section>
+
+  <section class="widget modal hidden" id="settings" data-widget="settings">
+    <header class="widget-header"><span class="title">설정</span><span class="spacer"></span><button id="btn-settings-close" class="icon-btn">✕</button></header>
+    <div id="settings-body"></div>
+  </section>
+
+  <script src="../shared/channels.js"></script>
+  <script src="util.js"></script>
+  <script src="altering-hud.js"></script>
+  <script src="gather-panel.js"></script>
+  <script src="alter-panel.js"></script>
+  <script src="settings.js"></script>
+  <script src="interact.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

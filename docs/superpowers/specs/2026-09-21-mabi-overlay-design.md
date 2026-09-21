@@ -93,18 +93,24 @@ CLI 종료코드: 0 성공(단, 바디의 status/error 별도 확인), 2 사용�
 
 ## 자동 재가공
 
-즐겨찾기별 토글 `autoRequeue` (기본 false). 켜져 있으면:
+즐겨찾기별 토글 `autoRequeue` (기본 false)와 수령 기준 `collectThreshold`(1~7, 기본 1). 켜져 있으면:
 
 ```
 3초 폴링 결과 completedCount > 0
  → 완료 works 중 DisplayName이 autoRequeue 켜진 즐겨찾기와 일치하는 것만 대상
- → 대상 시설별로:
+ → 대상 시설별로 아이템마다:
      완료 건수 k = 그 시설의 완료 works 중 해당 아이템 개수
-     complete_altering_work {displayName}   (시설 전체 수령)
-     execute_altering {displayName} × k
+     대기 건수 pending = 그 시설의 미완료(State ≠ Completed) works 중 해당 아이템 개수
+     k >= collectThreshold 이거나 (k > 0 && pending === 0)이면 그 아이템은 "수령 대상"
+ → 시설 안에 수령 대상 아이템이 하나라도 있으면:
+     complete_altering_work {displayName}   (시설 전체 수령, threshold 미달 아이템도 함께 수령됨)
+     아이템별로 execute_altering {displayName} × k
+   하나도 없으면 그 시설은 건너뛴다(CLI 호출 없음)
  → 거부/오류(not_enough_ingredient, not_enough_currency, blocked, not_in_field, timeout)
      → 그 아이템 자동 재가공 일시정지, 배지에 사유. 60초 후 재시도, 연속 3회 실패면 토글 끄고 알림.
 ```
+
+수령 기준(`collectThreshold`)에 못 미쳐도 그 아이템의 대기 중인 작업이 하나도 없으면(더 완료될 게 없으므로) 즉시 수령한다.
 
 - 툴바에 🔁 배지 상시 표시(켜진 아이템 수). 클릭 → 전체 일시정지/재개.
 - 채집 루프 실행 중에는 자동 재가공을 미룬다(cli-lock 우선순위).
@@ -146,7 +152,7 @@ CLI 종료코드: 0 성공(단, 바디의 status/error 별도 확인), 2 사용�
 
 - 시작 시 `status` 확인. exit 5면 HUD 상단 배지: `game_off` → "게임을 실행하세요", `option_off` → "설정에서 MM AI 에이전트를 켜세요". 10초마다 재시도.
 - CLI 실행 파일을 못 찾으면 배지 "CLI 없음: MABINOGI_CLI_PATH 설정" 표시.
-- exit 4 → `capabilities` 재조회 1회 후 재시도, 그래도 4면 해당 기능 버튼 비활성.
+- exit 4(`unknown_command`) → 현재 구현은 재조회 없이 "게임이 이 명령을 지원하지 않습니다 — 게임 업데이트 확인" 문구만 표시한다. (2026-09-21 판정: 실측 명령 28개가 모두 존재해 발생 가능성이 게임 업데이트 시로 한정되므로 `capabilities` 재조회·버튼 비활성은 후속 작업으로 보류.)
 - JSON 파싱 실패 → 해당 폴링 건너뜀, 연속 3회 실패 시 배지.
 - 한글 바디는 항상 `base64:` 접두로 전송. 응답은 stdout JSON.parse — 조회 명령은 바디를 그대로, 행동 명령은 `{status, body}` 래퍼로 오므로 둘 다 처리.
 - MoFo 등 다른 CLI 호출자와 동시에 띄우면 게임 쪽 응답이 섞일 수 있으므로 실행 안내에 "MoFo를 끄고 실행"을 명시.
@@ -158,7 +164,7 @@ CLI 종료코드: 0 성공(단, 바디의 status/error 별도 확인), 2 사용�
 ```json
 {
   "gatherFavorites": [{ "displayName": "통나무", "repeat": 10 }],
-  "alterFavorites": [{ "displayName": "버섯 가루", "count": 6, "autoRequeue": false }],
+  "alterFavorites": [{ "displayName": "버섯 가루", "count": 6, "autoRequeue": false, "collectThreshold": 1 }],
   "autoSpentWings": { "date": "2026-09-21", "amount": 0 },
   "visibleFacilities": { "metal": true, "wood": true, "leather": true, "cloth": true, "medicine": true, "food": true },
   "layout": "2row",
