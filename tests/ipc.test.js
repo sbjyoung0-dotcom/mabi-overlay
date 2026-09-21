@@ -25,6 +25,8 @@ function setup(responses) {
     alterQueue: { enqueue: async (a) => { log.push(['enqueue', a]); }, pauseAuto: (v) => log.push(['pause', v]), isAutoPaused: () => true },
     poller: { refreshNow: async () => log.push(['refresh']) },
     setInteractive: (v) => log.push(['interactive', v]),
+    setRects: (v) => log.push(['rects', v]),
+    toggleClickThrough: () => log.push(['clickthrough-toggle']),
     quit: () => log.push(['quit']),
   };
   const { handlers, ipcMain } = fakeIpcMain();
@@ -51,8 +53,10 @@ test('gather start/stop, alter enqueue, auto pause, window', async () => {
   await new Promise((r) => setImmediate(r));
   assert.equal(await handlers[CH.AUTO_PAUSE](true), true);
   await handlers[CH.WINDOW_INTERACTIVE](true);
+  await handlers[CH.WINDOW_RECTS]([{ x: 0, y: 0, w: 10, h: 10 }]);
+  await handlers[CH.CLICKTHROUGH_TOGGLE]();
   await handlers[CH.WINDOW_QUIT]();
-  assert.deepEqual(log.map((l) => l[0]), ['gather.start', 'gather.stop', 'enqueue', 'refresh', 'pause', 'interactive', 'quit']);
+  assert.deepEqual(log.map((l) => l[0]), ['gather.start', 'gather.stop', 'enqueue', 'refresh', 'pause', 'interactive', 'rects', 'clickthrough-toggle', 'quit']);
 });
 
 test('alter collect: CLI 호출 후 해석 결과를 돌려주고 재폴링', async () => {

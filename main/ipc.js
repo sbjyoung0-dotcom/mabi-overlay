@@ -13,7 +13,7 @@ function listOf(r) {
 }
 
 function registerIpc({ ipcMain, services }) {
-  const { config, cli, lock, gather, alterQueue, poller, setInteractive, quit } = services;
+  const { config, cli, lock, gather, alterQueue, poller, setInteractive, setRects, toggleClickThrough, quit } = services;
   const h = (ch, fn) => ipcMain.handle(ch, (_event, payload) => fn(payload));
 
   h(CH.CONFIG_GET, () => config.get());
@@ -43,6 +43,8 @@ function registerIpc({ ipcMain, services }) {
 
   h(CH.WINDOW_INTERACTIVE, (on) => { setInteractive(!!on); return true; });
   h(CH.WINDOW_QUIT, () => { quit(); return true; });
+  h(CH.WINDOW_RECTS, (rects) => { setRects(rects); return true; });
+  h(CH.CLICKTHROUGH_TOGGLE, () => { toggleClickThrough(); return true; });
 }
 
 module.exports = { registerIpc, listOf };
