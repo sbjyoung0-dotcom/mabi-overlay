@@ -13,11 +13,13 @@ function listOf(r) {
 }
 
 function registerIpc({ ipcMain, services }) {
-  const { config, cli, lock, gather, alterQueue, poller, setInteractive, setRects, toggleClickThrough, quit } = services;
+  const { config, cli, lock, gather, alterQueue, poller, setRects, toggleClickThrough, onConfigChanged, quit } = services;
   const h = (ch, fn) => ipcMain.handle(ch, (_event, payload) => fn(payload));
 
   h(CH.CONFIG_GET, () => config.get());
-  h(CH.CONFIG_SET, (patch) => config.set(patch));
+  // 렌더러가 스스로 트리거한 변경이므로 EV_CONFIG는 쏘지 않는다(이미 최신 config를 갖고 있음).
+  // 트레이 메뉴(위치 잠금 체크박스)만 갱신한다.
+  h(CH.CONFIG_SET, (patch) => { const c = config.set(patch); onConfigChanged(); return c; });
 
   h(CH.GATHER_START, ({ displayName, repeat }) => {
     if (!gather.isRunning()) gather.start({ displayName, repeat }).catch(() => {});
@@ -41,7 +43,6 @@ function registerIpc({ ipcMain, services }) {
   h(CH.LIST_ALTERABLE, async () => listOf(await lock.run(PRIORITY.MANUAL, () => cli.run('get_alterable_items'))));
   h(CH.STATUS_GET, ({ fresh } = {}) => fetchGameStatus({ cli, lock, priority: fresh ? PRIORITY.MANUAL : undefined }));
 
-  h(CH.WINDOW_INTERACTIVE, (on) => { setInteractive(!!on); return true; });
   h(CH.WINDOW_QUIT, () => { quit(); return true; });
   h(CH.WINDOW_RECTS, (rects) => { setRects(rects); return true; });
   h(CH.CLICKTHROUGH_TOGGLE, () => { toggleClickThrough(); return true; });

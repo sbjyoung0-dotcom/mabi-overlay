@@ -136,8 +136,9 @@ app.whenReady().then(() => {
   registerIpc({
     ipcMain,
     services: {
-      config, cli, lock, gather, alterQueue, poller, setInteractive, setRects,
+      config, cli, lock, gather, alterQueue, poller, setRects,
       toggleClickThrough: toggleFullClickThrough,
+      onConfigChanged: () => refreshTrayMenu(),
       quit: () => app.quit(),
     },
   });

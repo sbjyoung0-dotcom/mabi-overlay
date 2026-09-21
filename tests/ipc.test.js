@@ -24,9 +24,9 @@ function setup(responses) {
     gather: { isRunning: () => false, start: async (a) => { log.push(['gather.start', a]); }, stop: async () => log.push(['gather.stop']) },
     alterQueue: { enqueue: async (a) => { log.push(['enqueue', a]); }, pauseAuto: (v) => log.push(['pause', v]), isAutoPaused: () => true },
     poller: { refreshNow: async () => log.push(['refresh']) },
-    setInteractive: (v) => log.push(['interactive', v]),
     setRects: (v) => log.push(['rects', v]),
     toggleClickThrough: () => log.push(['clickthrough-toggle']),
+    onConfigChanged: () => log.push(['config-changed']),
     quit: () => log.push(['quit']),
   };
   const { handlers, ipcMain } = fakeIpcMain();
@@ -39,10 +39,11 @@ test('모든 renderer→main 채널에 핸들러가 등록된다', () => {
   for (const key of Object.keys(CH).filter((k) => !k.startsWith('EV_'))) assert.ok(handlers[CH[key]], key);
 });
 
-test('config get/set', async () => {
-  const { handlers } = setup([]);
+test('config get/set: CONFIG_SET은 onConfigChanged를 1회 호출한다 (트레이 메뉴 갱신)', async () => {
+  const { handlers, log } = setup([]);
   assert.equal((await handlers[CH.CONFIG_GET]()).locked, true);
   assert.equal((await handlers[CH.CONFIG_SET]({ locked: false })).locked, false);
+  assert.deepEqual(log.map((l) => l[0]), ['config-changed']);
 });
 
 test('gather start/stop, alter enqueue, auto pause, window', async () => {
@@ -52,11 +53,10 @@ test('gather start/stop, alter enqueue, auto pause, window', async () => {
   await handlers[CH.ALTER_ENQUEUE]({ displayName: 'x', count: 1 });
   await new Promise((r) => setImmediate(r));
   assert.equal(await handlers[CH.AUTO_PAUSE](true), true);
-  await handlers[CH.WINDOW_INTERACTIVE](true);
   await handlers[CH.WINDOW_RECTS]([{ x: 0, y: 0, w: 10, h: 10 }]);
   await handlers[CH.CLICKTHROUGH_TOGGLE]();
   await handlers[CH.WINDOW_QUIT]();
-  assert.deepEqual(log.map((l) => l[0]), ['gather.start', 'gather.stop', 'enqueue', 'refresh', 'pause', 'interactive', 'rects', 'clickthrough-toggle', 'quit']);
+  assert.deepEqual(log.map((l) => l[0]), ['gather.start', 'gather.stop', 'enqueue', 'refresh', 'pause', 'rects', 'clickthrough-toggle', 'quit']);
 });
 
 test('alter collect: CLI 호출 후 해석 결과를 돌려주고 재폴링', async () => {

@@ -13,7 +13,6 @@
     LIST_GATHERABLE: 'lists:gatherable',
     LIST_ALTERABLE: 'lists:alterable',
     STATUS_GET: 'status:get',
-    WINDOW_INTERACTIVE: 'window:set-interactive',
     WINDOW_QUIT: 'window:quit',
     WINDOW_RECTS: 'window:set-rects',
     CLICKTHROUGH_TOGGLE: 'window:toggle-clickthrough',
