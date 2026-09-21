@@ -93,18 +93,24 @@ CLI 종료코드: 0 성공(단, 바디의 status/error 별도 확인), 2 사용�
 
 ## 자동 재가공
 
-즐겨찾기별 토글 `autoRequeue` (기본 false). 켜져 있으면:
+즐겨찾기별 토글 `autoRequeue` (기본 false)와 수령 기준 `collectThreshold`(1~7, 기본 1). 켜져 있으면:
 
 ```
 3초 폴링 결과 completedCount > 0
  → 완료 works 중 DisplayName이 autoRequeue 켜진 즐겨찾기와 일치하는 것만 대상
- → 대상 시설별로:
+ → 대상 시설별로 아이템마다:
      완료 건수 k = 그 시설의 완료 works 중 해당 아이템 개수
-     complete_altering_work {displayName}   (시설 전체 수령)
-     execute_altering {displayName} × k
+     대기 건수 pending = 그 시설의 미완료(State ≠ Completed) works 중 해당 아이템 개수
+     k >= collectThreshold 이거나 (k > 0 && pending === 0)이면 그 아이템은 "수령 대상"
+ → 시설 안에 수령 대상 아이템이 하나라도 있으면:
+     complete_altering_work {displayName}   (시설 전체 수령, threshold 미달 아이템도 함께 수령됨)
+     아이템별로 execute_altering {displayName} × k
+   하나도 없으면 그 시설은 건너뛴다(CLI 호출 없음)
  → 거부/오류(not_enough_ingredient, not_enough_currency, blocked, not_in_field, timeout)
      → 그 아이템 자동 재가공 일시정지, 배지에 사유. 60초 후 재시도, 연속 3회 실패면 토글 끄고 알림.
 ```
+
+수령 기준(`collectThreshold`)에 못 미쳐도 그 아이템의 대기 중인 작업이 하나도 없으면(더 완료될 게 없으므로) 즉시 수령한다.
 
 - 툴바에 🔁 배지 상시 표시(켜진 아이템 수). 클릭 → 전체 일시정지/재개.
 - 채집 루프 실행 중에는 자동 재가공을 미룬다(cli-lock 우선순위).
@@ -158,7 +164,7 @@ CLI 종료코드: 0 성공(단, 바디의 status/error 별도 확인), 2 사용�
 ```json
 {
   "gatherFavorites": [{ "displayName": "통나무", "repeat": 10 }],
-  "alterFavorites": [{ "displayName": "버섯 가루", "count": 6, "autoRequeue": false }],
+  "alterFavorites": [{ "displayName": "버섯 가루", "count": 6, "autoRequeue": false, "collectThreshold": 1 }],
   "autoSpentWings": { "date": "2026-09-21", "amount": 0 },
   "visibleFacilities": { "metal": true, "wood": true, "leather": true, "cloth": true, "medicine": true, "food": true },
   "layout": "2row",

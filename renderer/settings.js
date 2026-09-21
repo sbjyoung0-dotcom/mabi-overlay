@@ -43,19 +43,23 @@ window.Settings = (() => {
     cfg.alterFavorites.forEach((f, i) => {
       const chk = UI.el('input', { type: 'checkbox', onchange: (e) => save({ alterFavorites: cfg.alterFavorites.map((x, j) => (j === i ? { ...x, autoRequeue: e.target.checked } : x)) }) });
       chk.checked = !!f.autoRequeue;
+      const thr = UI.el('input', { type: 'number', min: '1', max: '7', value: String(f.collectThreshold || 1), class: 'threshold-input',
+        onchange: (e) => save({ alterFavorites: cfg.alterFavorites.map((x, j) => (j === i ? { ...x, collectThreshold: clamp(e.target.value, 1, 7, 1) } : x)) }) });
       root.append(favRow(`${f.displayName} ×${f.count}건`,
         () => save({ alterFavorites: cfg.alterFavorites.filter((_, j) => j !== i) }),
-        UI.el('label', { class: 'sub' }, [chk, ' 자동 재가공'])));
+        UI.el('label', { class: 'sub' }, [chk, ' 자동 재가공', thr, ' 건 완료 시 수령'])));
     });
     const aSel = UI.el('select');
     const aCnt = UI.el('input', { type: 'number', min: '1', max: '7', value: '6' });
+    const aThr = UI.el('input', { type: 'number', min: '1', max: '7', value: '1' });
     root.append(UI.el('div', { class: 'add-row' }, [
       UI.el('button', { class: 'btn', text: '목록 불러오기', onclick: () => loadList(CH.LIST_ALTERABLE, aSel, (it) =>
         `${it.DisplayName} (1건=${it.ProducedPerWork ?? '?'}개)` + (it.Alterable === false ? ` [불가: ${it.Reason || ''}]` : '')) }),
       aSel, aCnt, UI.el('span', { text: '건' }),
+      aThr, UI.el('span', { text: '건 완료 시 수령' }),
       UI.el('button', { class: 'btn primary', text: '추가', onclick: () => {
         if (!aSel.value) return;
-        save({ alterFavorites: [...cfg.alterFavorites, { displayName: aSel.value, count: clamp(aCnt.value, 1, 7, 6), autoRequeue: false }] });
+        save({ alterFavorites: [...cfg.alterFavorites, { displayName: aSel.value, count: clamp(aCnt.value, 1, 7, 6), autoRequeue: false, collectThreshold: clamp(aThr.value, 1, 7, 1) }] });
       } }),
     ]));
     root.append(UI.el('p', { class: 'warn', text: '⚠ 자동 재가공은 클릭 없이 캐릭터를 시설로 이동시키고 건당 정령의 날개 5개를 씁니다. 전투/던전 중에는 거부되며, 3회 연속 실패하면 자동으로 꺼집니다.' }));

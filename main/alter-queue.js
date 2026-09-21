@@ -1,5 +1,6 @@
 'use strict';
 const { PRIORITY } = require('./cli-lock');
+const { isCompleted } = require('./altering');
 
 const WINGS_PER_CALL = 5;
 
@@ -22,6 +23,16 @@ function interpretAlterResult(r) {
   const b = r.body || {};
   if (b.error) return { ok: false, reason: b.error, message: REJECT_MESSAGES[b.error] || b.message || b.error, cost: b.cost };
   return { ok: true, result: b.result, cost: b.cost, collected: b.collected };
+}
+
+// 아이템별 threshold(1~7, 기본 1) 클램프 — 즐겨찾기에 값이 없거나 범위 밖이면 기본값
+function clampThreshold(v) { return Math.max(1, Math.min(7, Number(v) || 1)); }
+
+// 완료 k건, 미완료(pending) 건, threshold를 보고 지금 수령할지 결정하는 순수 함수
+// - k가 threshold 이상이면 수령
+// - threshold 미달이라도 더 완료될 게 없으면(pending === 0) 수령
+function shouldCollect({ completed, pending, threshold }) {
+  return completed >= threshold || (completed > 0 && pending === 0);
 }
 
 function todayKey(nowMs) {
@@ -78,19 +89,30 @@ function createAlterQueue({ cli, lock, config, onProgress = () => {}, onAutoEven
   // 폴링 결과에서 자동 재가공 대상(완료 + 토글 켜짐)을 골라 시설 단위로 한 번만 수령 → 아이템별로 같은 수만큼 재등록
   async function handleWorksUpdate(update) {
     if (autoPaused || autoBusy) return;
-    const autoNames = new Set(config.get().alterFavorites.filter((f) => f.autoRequeue).map((f) => f.displayName));
-    if (autoNames.size === 0) return;
+    const autoFavorites = config.get().alterFavorites.filter((f) => f.autoRequeue);
+    const favByName = new Map(autoFavorites.map((f) => [f.displayName, f]));
+    if (favByName.size === 0) return;
     const t = now();
     const groupTargets = [];
     for (const g of Object.values(update.groups)) {
       const items = {};
       for (const w of g.completed) {
-        if (!autoNames.has(w.DisplayName)) continue;
+        if (!favByName.has(w.DisplayName)) continue;
         const s = itemState[w.DisplayName];
         if (s && s.retryAfter > t) continue;
         items[w.DisplayName] = (items[w.DisplayName] || 0) + 1;
       }
-      if (Object.keys(items).length > 0) groupTargets.push(items);
+      if (Object.keys(items).length === 0) continue;
+      // 같은 그룹(시설) 안에서 대상 아이템의 미완료 건수 — 더 완료될 게 남았는지 판단
+      const pending = {};
+      for (const w of g.works) {
+        if (isCompleted(w) || !items[w.DisplayName]) continue;
+        pending[w.DisplayName] = (pending[w.DisplayName] || 0) + 1;
+      }
+      const triggered = Object.entries(items).some(([name, k]) => shouldCollect({
+        completed: k, pending: pending[name] || 0, threshold: clampThreshold(favByName.get(name).collectThreshold),
+      }));
+      if (triggered) groupTargets.push(items);
     }
     if (groupTargets.length === 0) return;
     autoBusy = true;
@@ -137,4 +159,4 @@ function createAlterQueue({ cli, lock, config, onProgress = () => {}, onAutoEven
   };
 }
 
-module.exports = { WINGS_PER_CALL, interpretAlterResult, addAutoSpent, createAlterQueue };
+module.exports = { WINGS_PER_CALL, interpretAlterResult, addAutoSpent, shouldCollect, createAlterQueue };

@@ -11,7 +11,7 @@ window.AlterPanel = (() => {
     for (const f of config.alterFavorites) {
       row.append(UI.el('button', {
         class: 'btn fav', text: `${f.displayName} ×${f.count}건${f.autoRequeue ? ' 🔁' : ''}`,
-        title: `정령의 날개 ${f.count * 5}개${f.autoRequeue ? ' · 자동 재가공 켜짐' : ''}`,
+        title: `정령의 날개 ${f.count * 5}개${f.autoRequeue ? ` · 자동 재가공 켜짐 · ${f.collectThreshold || 1}건 완료 시 수령` : ''}`,
         disabled: running || disabled, onclick: () => onStart(f),
       }));
     }
