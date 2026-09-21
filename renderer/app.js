@@ -91,7 +91,7 @@
   $('btn-quit').addEventListener('click', () => M.invoke(CH.WINDOW_QUIT));
   $('btn-settings').addEventListener('click', () => Settings.open(() => config, setConfig));
   $('btn-settings-close').addEventListener('click', () => Settings.close());
-  const CONN_TEXT = { game_off: '게임을 실행하세요', option_off: '설정에서 MM AI 에이전트를 켜세요', cli_missing: 'CLI 없음: MABINOGI_CLI_PATH 설정', parse_error: 'CLI 응답을 읽을 수 없음 (3회 연속)' };
+  const CONN_TEXT = { game_off: '게임 연결 없음 — 게임 실행 및 "MM AI 에이전트 활성화" 확인', option_off: '설정에서 MM AI 에이전트를 켜세요', cli_missing: 'CLI 없음: MABINOGI_CLI_PATH 설정', parse_error: 'CLI 응답을 읽을 수 없음 (3회 연속)' };
   M.on(CH.EV_CONN, (s) => {
     const b = $('badge-conn');
     b.textContent = s.connected ? '' : (CONN_TEXT[s.reason] || `연결 없음: ${s.reason}`);

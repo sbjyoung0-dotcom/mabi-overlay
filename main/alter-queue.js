@@ -5,7 +5,7 @@ const { isCompleted } = require('./altering');
 const WINGS_PER_CALL = 5;
 
 const REJECT_MESSAGES = {
-  not_enough_ingredient: '재료 부족', not_available: '큐가 가득 참', not_enough_currency: '정령의 날개 부족',
+  not_enough_ingredient: '재료 부족', not_available: '큐가 가득 참', not_enough_currency: '정령의 날개 부족', disconnected: '게임 연결 끊김',
   requires_user_interaction: '게임에서 직접 시작해야 하는 레시피', insufficient_facility_level: '시설 레벨 부족',
   ingredient_locked: '재료 잠김', insufficient_transfer_cost: '이송 비용 부족', blocked: '게임 화면 확인 필요',
   not_in_field: '필드가 아님', overweight: '무게 초과', facility_not_found: '시설 없음', not_found: '레시피 없음',
