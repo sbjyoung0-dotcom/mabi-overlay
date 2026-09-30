@@ -132,6 +132,7 @@ app.whenReady().then(() => {
   const conn = createConnectionMonitor({ cli, lock, onChange: (s) => send(CH.EV_CONN, s) });
   const completionNotifier = createCompletionNotifier({
     getConfig: () => config.get(),
+    isAutoPaused: () => alterQueue.isAutoPaused(),
     notify: (title, body) => {
       if (Notification.isSupported()) new Notification({ title, body, silent: false }).show();
     },

@@ -53,6 +53,8 @@
 
   const busy = () => GatherPanel.isRunning() || AlterPanel.isRunning() || CraftPanel.isRunning() || confirming;
 
+  const fmtDay = (ms) => { const d = new Date(ms); return `${d.getMonth() + 1}/${d.getDate()}`; };
+
   // 재료가 부족할 때 "다른 캐릭터 어디에 있는지"를 확인창에 붙인다(저장된 스냅샷만 사용, CLI 추가 호출 없음).
   async function shortageWarn(kind, item) {
     const missing = item.MissingIngredients || [];
@@ -63,12 +65,14 @@
     const lines = missing.map((m) => {
       const holders = found[m.DisplayName] || [];
       let where;
-      if (holders.length > 0) where = ' → ' + holders.slice(0, 3).map((h) => `${h.label} ${h.subtotal}개`).join(' · ');
+      // 기록 시각을 함께 보여준다 — 며칠 지난 수치를 현재 값으로 오해하지 않도록.
+      if (holders.length > 0) where = ' → ' + holders.slice(0, 3).map((h) => `${h.label} ${h.subtotal}개${h.savedAt ? `(${fmtDay(h.savedAt)})` : ''}`).join(' · ');
       else if (!r || r.characterCount === 0) where = ' → 다른 캐릭터 기록 없음 (🔍을 캐릭터마다 한 번씩 열어두세요)';
       else where = ' → 다른 캐릭터에도 없음';
       return `  ${m.DisplayName} ${m.Owned}/${m.Required}${where}`;
     });
-    return `${head}\n${lines.join('\n')}`;
+    const caution = r && r.currentUnknown ? '\n  (직업을 읽지 못해 현재 캐릭터 보유분이 섞여 있을 수 있습니다)' : '';
+    return `${head}\n${lines.join('\n')}${caution}`;
   }
 
   async function startGather(fav) {

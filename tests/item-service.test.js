@@ -97,7 +97,7 @@ test('locate: 부족한 재료를 가진 다른 캐릭터를 찾고, 참고 가�
   store.save({ job: '전사', label: '전사', savedAt: 500, inventory: { 가죽: 20 }, characterStorage: {} });
   const { service } = setup((command) => (command === 'get_my_info' ? okInfo : okItems), store);
   await service.refresh();
-  const r = service.locate(['가죽', '없는재료']);
+  const r = await service.locate(['가죽', '없는재료']);
   assert.deepEqual(r.found['가죽'].map((h) => [h.label, h.subtotal]), [['전사', 20]]);
   assert.deepEqual(r.found['없는재료'], []);
   assert.equal(r.characterCount, 1);
@@ -106,7 +106,7 @@ test('locate: 부족한 재료를 가진 다른 캐릭터를 찾고, 참고 가�
 test('locate: 저장된 기록이 현재 캐릭터뿐이면 characterCount가 0이다', async () => {
   const { service } = setup((command) => (command === 'get_my_info' ? okInfo : okItems));
   await service.refresh();
-  assert.equal(service.locate(['가죽']).characterCount, 0);
+  assert.equal((await service.locate(['가죽'])).characterCount, 0);
 });
 
 test('rename / forget은 갱신된 캐릭터 목록을 돌려준다', async () => {
@@ -142,4 +142,32 @@ test('search: 이름을 바꾼 현재 캐릭터는 결과에도 바뀐 라벨로
   await service.refresh();
   service.rename('사제', '사제(본캐)');
   assert.equal(service.search('새록').results[0].sources[0].label, '사제(본캐)');
+});
+
+test('locate: 🔍를 연 적이 없어도 직업을 조회해 현재 캐릭터를 제외한다', async () => {
+  const store = tmpStore();
+  store.save({ job: '사제', label: '사제', savedAt: 1, inventory: { 가죽: 999 }, characterStorage: {} });
+  store.save({ job: '전사', label: '전사', savedAt: 2, inventory: { 가죽: 20 }, characterStorage: {} });
+  const { service, calls } = setup((command) => (command === 'get_my_info' ? okInfo : okItems), store);
+  const r = await service.locate(['가죽']);          // refresh() 없이 바로 호출
+  assert.deepEqual(calls.map((c) => c.command), ['get_my_info']);
+  assert.deepEqual(r.found['가죽'].map((h) => h.label), ['전사']);
+  assert.equal(r.characterCount, 1);
+  assert.equal(r.currentUnknown, false);
+});
+
+test('locate: 직업 조회가 실패하면 제외하지 못했음을 알린다', async () => {
+  const store = tmpStore();
+  store.save({ job: '사제', label: '사제', savedAt: 1, inventory: { 가죽: 999 }, characterStorage: {} });
+  const { service } = setup([disconnected], store);
+  const r = await service.locate(['가죽']);
+  assert.equal(r.currentUnknown, true);
+  assert.deepEqual(r.found['가죽'].map((h) => h.label), ['사제']);
+});
+
+test('locate: 한 번 읽은 직업은 다시 조회하지 않는다', async () => {
+  const { service, calls } = setup((command) => (command === 'get_my_info' ? okInfo : okItems));
+  await service.locate(['가죽']);
+  await service.locate(['가죽']);
+  assert.equal(calls.filter((c) => c.command === 'get_my_info').length, 1);
 });
