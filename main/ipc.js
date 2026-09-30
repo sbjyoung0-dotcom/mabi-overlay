@@ -60,6 +60,7 @@ function registerIpc({ ipcMain, services }) {
   // 검색창을 열 때 REFRESH로 CLI를 한 번만 부르고, 타이핑마다는 SEARCH(메모리)로 거른다.
   h(CH.ITEMS_REFRESH, () => itemService.refresh());
   h(CH.ITEMS_SEARCH, ({ query } = {}) => itemService.search(query));
+  h(CH.ITEMS_LOCATE, ({ names } = {}) => itemService.locate(names));
   h(CH.ITEMS_RENAME, ({ job, label }) => itemService.rename(job, label));
   h(CH.ITEMS_FORGET, ({ job }) => itemService.forget(job));
 

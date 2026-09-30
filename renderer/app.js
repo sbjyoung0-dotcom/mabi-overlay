@@ -16,7 +16,7 @@
 
   // fresh=true면(확인창 직전) 잠금이 바빠도 기다렸다가 최신 값을 받는다. 그 외(30초 주기, 루프 종료 후)는 바쁘면 건너뛴다.
   async function refreshStatus(fresh = false) {
-    if (!fresh && (GatherPanel.isRunning() || AlterPanel.isRunning())) return;
+    if (!fresh && (GatherPanel.isRunning() || AlterPanel.isRunning() || CraftPanel.isRunning())) return;
     const s = await M.invoke(CH.STATUS_GET, { fresh });
     if (s) gameStatus = s;
   }
@@ -31,12 +31,8 @@
       const per = item && item.ProducedPerCraft ? ` (예상 ${item.ProducedPerCraft * fav.craftCount}개)` : '';
       let warn = '';
       if (!list.items) warn = `
-⚠ 목록 조회 실패: ${list.message}`;
-      else if (item && item.Craftable === false) {
-        const missing = (item.MissingIngredients || []).map((m) => `${m.DisplayName} ${m.Owned}/${m.Required}`).join(', ');
-        warn = `
-⚠ 지금은 제작 불가: ${item.Reason || ''} ${missing}`.trimEnd();
-      }
+⚠ ${list.message}`;
+      else if (item && item.Craftable === false) warn = await shortageWarn('제작', item);
       const ok = await UI.confirm(
         `${fav.displayName} × ${fav.craftCount}회${per}
 정령의 날개 5개 소모(횟수와 무관) · 현재 잔량 ${gameStatus?.wings ?? '?'}개${warn}
@@ -56,6 +52,24 @@
   }
 
   const busy = () => GatherPanel.isRunning() || AlterPanel.isRunning() || CraftPanel.isRunning() || confirming;
+
+  // 재료가 부족할 때 "다른 캐릭터 어디에 있는지"를 확인창에 붙인다(저장된 스냅샷만 사용, CLI 추가 호출 없음).
+  async function shortageWarn(kind, item) {
+    const missing = item.MissingIngredients || [];
+    const head = `\n⚠ 지금은 ${kind} 불가${item.Reason ? ` (${item.Reason})` : ''}`;
+    if (missing.length === 0) return head;
+    const r = await M.invoke(CH.ITEMS_LOCATE, { names: missing.map((m) => m.DisplayName) });
+    const found = (r && r.found) || {};
+    const lines = missing.map((m) => {
+      const holders = found[m.DisplayName] || [];
+      let where;
+      if (holders.length > 0) where = ' → ' + holders.slice(0, 3).map((h) => `${h.label} ${h.subtotal}개`).join(' · ');
+      else if (!r || r.characterCount === 0) where = ' → 다른 캐릭터 기록 없음 (🔍을 캐릭터마다 한 번씩 열어두세요)';
+      else where = ' → 다른 캐릭터에도 없음';
+      return `  ${m.DisplayName} ${m.Owned}/${m.Required}${where}`;
+    });
+    return `${head}\n${lines.join('\n')}`;
+  }
 
   async function startGather(fav) {
     if (busy()) return;
@@ -87,10 +101,7 @@
       const per = item && item.ProducedPerWork ? ` (예상 ${item.ProducedPerWork * fav.count}개)` : '';
       let warn = '';
       if (!list.items) warn = `\n⚠ 목록 조회 실패: ${list.message}`;
-      else if (item && item.Alterable === false) {
-        const missing = (item.MissingIngredients || []).map((m) => `${m.DisplayName} ${m.Owned}/${m.Required}`).join(', ');
-        warn = `\n⚠ 지금은 가공 불가: ${item.Reason || ''} ${missing}`.trimEnd();
-      }
+      else if (item && item.Alterable === false) warn = await shortageWarn('가공', item);
       const ok = await UI.confirm(
         `${fav.displayName} × ${fav.count}건${per}\n정령의 날개 ${fav.count * 5}개 소모 · 현재 잔량 ${gameStatus?.wings ?? '?'}개${warn}\n시작할까요?`,
       );

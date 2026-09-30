@@ -17,6 +17,7 @@
     STATUS_GET: 'status:get',
     ITEMS_REFRESH: 'items:refresh',
     ITEMS_SEARCH: 'items:search',
+    ITEMS_LOCATE: 'items:locate',
     ITEMS_RENAME: 'items:rename',
     ITEMS_FORGET: 'items:forget',
     WINDOW_QUIT: 'window:quit',

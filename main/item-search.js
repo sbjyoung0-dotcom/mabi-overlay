@@ -80,4 +80,23 @@ function searchItems({ query, liveItems, liveJob, liveLabel, snapshots }) {
   return result;
 }
 
-module.exports = { splitByLocation, buildSnapshot, searchItems };
+// 재료 이름 목록을 받아 "다른 캐릭터 중 누가 갖고 있는지"를 찾는다.
+// 현재 접속 캐릭터는 제외한다 — 레시피의 Owned 수치가 이미 그쪽을 반영하기 때문.
+function locateInSnapshots({ names, snapshots, excludeJob }) {
+  const out = {};
+  for (const name of names || []) {
+    const holders = [];
+    for (const s of snapshots || []) {
+      if (!s || s.job === excludeJob) continue;
+      const inventory = (s.inventory && s.inventory[name]) || 0;
+      const storage = (s.characterStorage && s.characterStorage[name]) || 0;
+      const subtotal = inventory + storage;
+      if (subtotal > 0) holders.push({ label: s.label || s.job, savedAt: s.savedAt, inventory, storage, subtotal });
+    }
+    holders.sort((a, b) => b.subtotal - a.subtotal || a.label.localeCompare(b.label, 'ko'));
+    out[name] = holders;
+  }
+  return out;
+}
+
+module.exports = { splitByLocation, buildSnapshot, searchItems, locateInSnapshots };

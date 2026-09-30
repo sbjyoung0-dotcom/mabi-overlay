@@ -1,6 +1,6 @@
 'use strict';
 const { PRIORITY } = require('./cli-lock');
-const { buildSnapshot, searchItems } = require('./item-search');
+const { buildSnapshot, searchItems, locateInSnapshots } = require('./item-search');
 
 // 검색창을 열 때 한 번만 CLI를 부르고(refresh), 타이핑할 때마다는 메모리에서 거른다(search).
 function createItemService({ cli, lock, store, now = Date.now }) {
@@ -50,9 +50,21 @@ function createItemService({ cli, lock, store, now = Date.now }) {
     };
   }
 
+  // 부족한 재료를 다른 캐릭터가 갖고 있는지 (CLI 추가 호출 없이 저장된 기록만 본다)
+  function locate(names) {
+    const snapshots = store.all();
+    const liveJob = live ? live.job : null;
+    return {
+      found: locateInSnapshots({ names, snapshots, excludeJob: liveJob }),
+      // 현재 접속 캐릭터를 뺀, 참고할 수 있는 기록 수
+      characterCount: snapshots.filter((s) => s.job !== liveJob).length,
+    };
+  }
+
   return {
     refresh,
     search,
+    locate,
     rename: (job, label) => store.rename(job, label),
     forget: (job) => store.forget(job),
     characters: () => store.all(),

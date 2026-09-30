@@ -18,6 +18,8 @@ const MESSAGES = {
   overweight: '무게 초과',
   not_in_field: '필드가 아님',
   facility_not_found: '시설 없음',
+  blocked: '게임 화면 확인 필요',
+  invalid_count: '한 번에 가능한 횟수를 넘었습니다',
   timeout: '시간 초과로 중단됨',
   canceled: '다른 명령으로 대체됨',
   unknown_command: '게임이 이 명령을 지원하지 않습니다 — 게임 업데이트 확인',
