@@ -10,6 +10,7 @@ const DEFAULTS = Object.freeze({
   layout: '2row',        // '1row' | '2row'
   positions: { altering: { x: 100, y: 100 }, gather: { x: 100, y: 320 }, alter: { x: 100, y: 460 }, craft: { x: 100, y: 600 } },
   locked: true,
+  notifyOnComplete: true,  // 가공 완료 시 Windows 알림
   autoSpentWings: { date: null, amount: 0 },
 });
 

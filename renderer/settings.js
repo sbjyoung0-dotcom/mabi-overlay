@@ -80,6 +80,13 @@ window.Settings = (() => {
     ]));
     root.append(UI.el('p', { class: 'warn', text: '제작은 버튼 한 번으로 이동·제작·수령까지 끝나며, 횟수와 관계없이 정령의 날개 5개를 씁니다. 시설마다 한 번에 가능한 최대 횟수가 있어 초과하면 최대 횟수를 알려줍니다.' }));
 
+    root.append(UI.el('h3', { text: '알림' }));
+    const notifyChk = UI.el('input', { type: 'checkbox', onchange: (e) => save({ notifyOnComplete: e.target.checked }) });
+    notifyChk.checked = cfg.notifyOnComplete !== false;
+    root.append(UI.el('div', { class: 'add-row' }, [
+      UI.el('label', { class: 'sub' }, [notifyChk, ' 가공이 완료되면 Windows 알림 (자동 재가공이 켜진 항목은 제외)']),
+    ]));
+
     root.append(UI.el('h3', { text: '시설 표시' }));
     const facRow = UI.el('div', { class: 'add-row' });
     for (const [key, label] of [['metal', '금속'], ['wood', '목재'], ['leather', '가죽'], ['cloth', '옷감'], ['medicine', '약품'], ['food', '식재료']]) {
