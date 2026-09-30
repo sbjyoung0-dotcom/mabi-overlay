@@ -13,7 +13,7 @@ function listOf(r) {
 }
 
 function registerIpc({ ipcMain, services }) {
-  const { config, cli, lock, gather, alterQueue, poller, itemService, setRects, toggleClickThrough, onConfigChanged, quit } = services;
+  const { config, cli, lock, gather, alterQueue, craftRunner, poller, itemService, setRects, toggleClickThrough, onConfigChanged, quit } = services;
   const h = (ch, fn) => ipcMain.handle(ch, (_event, payload) => fn(payload));
 
   h(CH.CONFIG_GET, () => config.get());
@@ -38,6 +38,20 @@ function registerIpc({ ipcMain, services }) {
   });
   h(CH.ALTER_REFRESH, () => poller.refreshNow());
   h(CH.AUTO_PAUSE, (paused) => { alterQueue.pauseAuto(paused); return alterQueue.isAutoPaused(); });
+
+  // 제작은 한 번의 호출로 이동·제작·수령까지 끝난다(가공처럼 큐에 쌓이지 않는다).
+  h(CH.CRAFT_RUN, ({ displayName, craftCount }) => {
+    if (!craftRunner.isRunning()) craftRunner.run({ displayName, craftCount }).catch(() => {});
+    return true;
+  });
+
+  h(CH.LIST_CRAFTABLE, async () => {
+    const r = await lock.run(PRIORITY.MANUAL, () => cli.run('get_craftable_items'));
+    if (r.ok && r.body && r.body.craftingUnlocked === false) {
+      return { items: null, message: '제작 기능이 아직 열리지 않았습니다' };
+    }
+    return listOf(r);
+  });
 
   h(CH.LIST_GATHERABLE, async () => listOf(await lock.run(PRIORITY.MANUAL, () => cli.run('get_gatherable_items'))));
   h(CH.LIST_ALTERABLE, async () => listOf(await lock.run(PRIORITY.MANUAL, () => cli.run('get_alterable_items'))));

@@ -64,6 +64,22 @@ window.Settings = (() => {
     ]));
     root.append(UI.el('p', { class: 'warn', text: '⚠ 자동 재가공은 클릭 없이 캐릭터를 시설로 이동시키고 건당 정령의 날개 5개를 씁니다. 전투/던전 중에는 거부되며, 3회 연속 실패하면 자동으로 꺼집니다.' }));
 
+    root.append(UI.el('h3', { text: '제작 즐겨찾기' }));
+    cfg.craftFavorites.forEach((f, i) => root.append(favRow(`${f.displayName} ×${f.craftCount}회`,
+      () => save({ craftFavorites: cfg.craftFavorites.filter((_, j) => j !== i) }))));
+    const cSel = UI.el('select');
+    const cCnt = UI.el('input', { type: 'number', min: '1', max: '99', value: '1' });
+    root.append(UI.el('div', { class: 'add-row' }, [
+      UI.el('button', { class: 'btn', text: '목록 불러오기', onclick: () => loadList(CH.LIST_CRAFTABLE, cSel, (it) =>
+        `${it.DisplayName} (1회=${it.ProducedPerCraft ?? '?'}개)` + (it.Craftable === false ? ` [불가: ${it.Reason || ''}]` : '')) }),
+      cSel, cCnt, UI.el('span', { text: '회' }),
+      UI.el('button', { class: 'btn primary', text: '추가', onclick: () => {
+        if (!cSel.value) return;
+        save({ craftFavorites: [...cfg.craftFavorites, { displayName: cSel.value, craftCount: clamp(cCnt.value, 1, 99, 1) }] });
+      } }),
+    ]));
+    root.append(UI.el('p', { class: 'warn', text: '제작은 버튼 한 번으로 이동·제작·수령까지 끝나며, 횟수와 관계없이 정령의 날개 5개를 씁니다. 시설마다 한 번에 가능한 최대 횟수가 있어 초과하면 최대 횟수를 알려줍니다.' }));
+
     root.append(UI.el('h3', { text: '시설 표시' }));
     const facRow = UI.el('div', { class: 'add-row' });
     for (const [key, label] of [['metal', '금속'], ['wood', '목재'], ['leather', '가죽'], ['cloth', '옷감'], ['medicine', '약품'], ['food', '식재료']]) {

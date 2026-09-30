@@ -23,6 +23,7 @@ function setup(responses) {
     config, cli, lock,
     gather: { isRunning: () => false, start: async (a) => { log.push(['gather.start', a]); }, stop: async () => log.push(['gather.stop']) },
     alterQueue: { enqueue: async (a) => { log.push(['enqueue', a]); }, pauseAuto: (v) => log.push(['pause', v]), isAutoPaused: () => true },
+    craftRunner: { isRunning: () => false, run: async (a) => { log.push(['craft.run', a]); return { ok: true }; } },
     poller: { refreshNow: async () => log.push(['refresh']) },
     itemService: {
       refresh: async () => { log.push(['items.refresh']); return { ok: true, liveJob: '사제', characters: [] }; },

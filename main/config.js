@@ -4,10 +4,11 @@ const path = require('node:path');
 
 const DEFAULTS = Object.freeze({
   gatherFavorites: [],   // [{ displayName, repeat }]
-  alterFavorites: [],    // [{ displayName, count, autoRequeue }]
+  alterFavorites: [],    // [{ displayName, count, autoRequeue, collectThreshold }]
+  craftFavorites: [],    // [{ displayName, craftCount }]
   visibleFacilities: { metal: true, wood: true, leather: true, cloth: true, medicine: true, food: true },
   layout: '2row',        // '1row' | '2row'
-  positions: { altering: { x: 100, y: 100 }, gather: { x: 100, y: 320 }, alter: { x: 100, y: 460 } },
+  positions: { altering: { x: 100, y: 100 }, gather: { x: 100, y: 320 }, alter: { x: 100, y: 460 }, craft: { x: 100, y: 600 } },
   locked: true,
   autoSpentWings: { date: null, amount: 0 },
 });

@@ -21,13 +21,41 @@
     if (s) gameStatus = s;
   }
 
+  async function startCraft(fav) {
+    if (busy()) return;
+    confirming = true; renderButtons();
+    try {
+      await refreshStatus(true);
+      const list = await M.invoke(CH.LIST_CRAFTABLE);
+      const item = list.items ? list.items.find((i) => i.DisplayName === fav.displayName) : null;
+      const per = item && item.ProducedPerCraft ? ` (예상 ${item.ProducedPerCraft * fav.craftCount}개)` : '';
+      let warn = '';
+      if (!list.items) warn = `
+⚠ 목록 조회 실패: ${list.message}`;
+      else if (item && item.Craftable === false) {
+        const missing = (item.MissingIngredients || []).map((m) => `${m.DisplayName} ${m.Owned}/${m.Required}`).join(', ');
+        warn = `
+⚠ 지금은 제작 불가: ${item.Reason || ''} ${missing}`.trimEnd();
+      }
+      const ok = await UI.confirm(
+        `${fav.displayName} × ${fav.craftCount}회${per}
+정령의 날개 5개 소모(횟수와 무관) · 현재 잔량 ${gameStatus?.wings ?? '?'}개${warn}
+시작할까요?`,
+      );
+      if (ok) M.invoke(CH.CRAFT_RUN, { displayName: fav.displayName, craftCount: fav.craftCount });
+    } finally {
+      confirming = false; renderButtons();
+    }
+  }
+
   function renderButtons() {
     GatherPanel.renderButtons(config, startGather, busy());
     AlterPanel.renderButtons(config, startAlter, busy());
+    CraftPanel.renderButtons(config, startCraft, busy());
     $('auto-count').textContent = String(config.alterFavorites.filter((f) => f.autoRequeue).length || '');
   }
 
-  const busy = () => GatherPanel.isRunning() || AlterPanel.isRunning() || confirming;
+  const busy = () => GatherPanel.isRunning() || AlterPanel.isRunning() || CraftPanel.isRunning() || confirming;
 
   async function startGather(fav) {
     if (busy()) return;
@@ -100,6 +128,7 @@
     b.classList.toggle('hidden', s.connected);
   });
   M.on(CH.EV_GATHER, (p) => { GatherPanel.renderProgress(p, gameStatus); renderButtons(); if (p.done) refreshStatus(); });
+  M.on(CH.EV_CRAFT, (p) => { CraftPanel.renderProgress(p); renderButtons(); if (!p.running) refreshStatus(); });
   M.on(CH.EV_ALTER, (p) => { AlterPanel.renderProgress(p); renderButtons(); if (!p.running) refreshStatus(); });
   M.on(CH.EV_AUTO, async (e) => { AlterPanel.renderAutoEvent(e); if (e.type === 'disabled') { config = await M.invoke(CH.CONFIG_GET); rerender(); Settings.refresh(); } });
   $('btn-auto').addEventListener('click', async () => {

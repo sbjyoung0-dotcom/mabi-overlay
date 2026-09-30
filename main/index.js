@@ -8,6 +8,7 @@ const { createLock } = require('./cli-lock');
 const { createAlteringPoller } = require('./altering');
 const { createGatherLoop } = require('./gather-loop');
 const { createAlterQueue } = require('./alter-queue');
+const { createCraftRunner } = require('./craft-runner');
 const { createConnectionMonitor } = require('./connection');
 const { createItemStore } = require('./item-store');
 const { createItemService } = require('./item-service');
@@ -133,6 +134,7 @@ app.whenReady().then(() => {
     onUpdate: (u) => { send(CH.EV_ALTERING, u); alterQueue.handleWorksUpdate(u).catch(() => {}); },
     onError: (r) => conn.report(r),
   });
+  const craftRunner = createCraftRunner({ cli, lock, onProgress: (p) => send(CH.EV_CRAFT, p) });
   const gather = createGatherLoop({ cli, lock, onProgress: (p) => send(CH.EV_GATHER, p) });
 
   createWindow();
@@ -140,7 +142,7 @@ app.whenReady().then(() => {
   registerIpc({
     ipcMain,
     services: {
-      config, cli, lock, gather, alterQueue, poller, itemService, setRects,
+      config, cli, lock, gather, alterQueue, craftRunner, poller, itemService, setRects,
       toggleClickThrough: toggleFullClickThrough,
       onConfigChanged: () => refreshTrayMenu(),
       quit: () => app.quit(),
