@@ -24,6 +24,12 @@ function setup(responses) {
     gather: { isRunning: () => false, start: async (a) => { log.push(['gather.start', a]); }, stop: async () => log.push(['gather.stop']) },
     alterQueue: { enqueue: async (a) => { log.push(['enqueue', a]); }, pauseAuto: (v) => log.push(['pause', v]), isAutoPaused: () => true },
     poller: { refreshNow: async () => log.push(['refresh']) },
+    itemService: {
+      refresh: async () => { log.push(['items.refresh']); return { ok: true, liveJob: '사제', characters: [] }; },
+      search: (q) => { log.push(['items.search', q]); return { results: [], liveJob: '사제', characters: [] }; },
+      rename: (job, label) => { log.push(['items.rename', job, label]); return []; },
+      forget: (job) => { log.push(['items.forget', job]); return []; },
+    },
     setRects: (v) => log.push(['rects', v]),
     toggleClickThrough: () => log.push(['clickthrough-toggle']),
     onConfigChanged: () => log.push(['config-changed']),

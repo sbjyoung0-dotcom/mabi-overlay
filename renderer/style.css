@@ -48,3 +48,22 @@ h3 { font-size: 12px; margin: 8px 0 4px; color: var(--accent); }
 #clickthrough-banner { position: absolute; top: 4px; left: 50%; transform: translateX(-50%); background: rgba(220,38,38,0.7);
   padding: 2px 10px; border-radius: 4px; font-size: 11px; }
 body.clickthrough .widget { opacity: 0.6; }
+
+/* 아이템 찾기 모달 */
+#items { min-width: 420px; max-width: 560px; }
+.search-input { width: 100%; box-sizing: border-box; background: rgba(0,0,0,0.4); color: var(--fg);
+  border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; padding: 4px 6px; font-size: 12px; }
+.items-notice { display: flex; justify-content: space-between; gap: 8px; margin: 4px 0; }
+.chips { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 4px; }
+.chip { display: inline-flex; align-items: center; gap: 2px; background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.15); border-radius: 10px; padding: 1px 4px 1px 8px; font-size: 11px; }
+.chip-live { border-color: var(--accent); color: var(--accent); }
+.chip input { width: 90px; background: rgba(0,0,0,0.4); color: var(--fg); border: none; font-size: 11px; }
+.items-results { max-height: 300px; overflow-y: auto; }
+.item-row { padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.07); }
+.item-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.item-name { font-weight: 700; }
+.item-total { color: var(--accent); font-weight: 800; }
+.item-src { color: var(--muted); font-size: 11px; padding-left: 8px; }
+.item-src.live { color: #e2e8f0; }
+.ago { color: #64748b; font-size: 10px; }
