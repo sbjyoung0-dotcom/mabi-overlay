@@ -24,6 +24,12 @@ function setup(responses) {
     gather: { isRunning: () => false, start: async (a) => { log.push(['gather.start', a]); }, stop: async () => log.push(['gather.stop']) },
     alterQueue: { enqueue: async (a) => { log.push(['enqueue', a]); }, pauseAuto: (v) => log.push(['pause', v]), isAutoPaused: () => true },
     poller: { refreshNow: async () => log.push(['refresh']) },
+    itemService: {
+      refresh: async () => { log.push(['items.refresh']); return { ok: true, liveJob: '사제', characters: [] }; },
+      search: (q) => { log.push(['items.search', q]); return { results: [], liveJob: '사제', characters: [] }; },
+      rename: (job, label) => { log.push(['items.rename', job, label]); return []; },
+      forget: (job) => { log.push(['items.forget', job]); return []; },
+    },
     setRects: (v) => log.push(['rects', v]),
     toggleClickThrough: () => log.push(['clickthrough-toggle']),
     onConfigChanged: () => log.push(['config-changed']),
@@ -86,6 +92,20 @@ test('STATUS_GET: fresh:true는 잠금이 바빠도 기다렸다가 값을 반�
   release();
   await hold;
   assert.deepEqual(await p, { wings: 10, weight: { current: 1, max: 2 } });
+});
+
+test('아이템 찾기 채널이 itemService로 올바른 인자와 함께 연결된다', async () => {
+  const { handlers, log } = setup([]);
+  assert.equal((await handlers[CH.ITEMS_REFRESH]()).liveJob, '사제');
+  assert.deepEqual((await handlers[CH.ITEMS_SEARCH]({ query: '버섯' })).results, []);
+  await handlers[CH.ITEMS_RENAME]({ job: '사제', label: '사제(본캐)' });
+  await handlers[CH.ITEMS_FORGET]({ job: '전사' });
+  assert.deepEqual(log, [
+    ['items.refresh'],
+    ['items.search', '버섯'],
+    ['items.rename', '사제', '사제(본캐)'],
+    ['items.forget', '전사'],
+  ]);
 });
 
 test('listOf: 배열 응답도 items로', () => {

@@ -17,7 +17,7 @@ window.Interact = (() => {
   function readPositions() {
     const out = {};
     for (const w of document.querySelectorAll('.widget[data-widget]')) {
-      if (w.dataset.widget === 'settings') continue;
+      if (w.classList.contains('modal')) continue; // 모달은 CSS로 화면 중앙에 고정된다
       out[w.dataset.widget] = { x: w.offsetLeft, y: w.offsetTop };
     }
     return out;
@@ -51,7 +51,7 @@ window.Interact = (() => {
       const header = e.target.closest('.widget-header');
       if (!header || e.target.closest('button')) return;
       const el = header.closest('.widget');
-      if (el.dataset.widget === 'settings') return;
+      if (el.classList.contains('modal')) return; // 모달은 드래그 대상이 아니다
       drag = { el, dx: e.clientX - el.offsetLeft, dy: e.clientY - el.offsetTop };
       el.classList.add('dragging');
     });

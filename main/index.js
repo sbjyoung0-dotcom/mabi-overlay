@@ -9,6 +9,8 @@ const { createAlteringPoller } = require('./altering');
 const { createGatherLoop } = require('./gather-loop');
 const { createAlterQueue } = require('./alter-queue');
 const { createConnectionMonitor } = require('./connection');
+const { createItemStore } = require('./item-store');
+const { createItemService } = require('./item-service');
 const { registerIpc } = require('./ipc');
 const { isOverAny, toWindowPoint } = require('./hit-test');
 
@@ -122,6 +124,8 @@ app.whenReady().then(() => {
   const lock = createLock();
   const send = (ch, data) => { if (win && !win.isDestroyed()) win.webContents.send(ch, data); };
 
+  const itemStore = createItemStore({ filePath: path.join(app.getPath('appData'), 'mabi-overlay', 'items-cache.json') });
+  const itemService = createItemService({ cli, lock, store: itemStore });
   const alterQueue = createAlterQueue({ cli, lock, config, onProgress: (p) => send(CH.EV_ALTER, p), onAutoEvent: (e) => send(CH.EV_AUTO, e) });
   const conn = createConnectionMonitor({ cli, lock, onChange: (s) => send(CH.EV_CONN, s) });
   const poller = createAlteringPoller({
@@ -136,7 +140,7 @@ app.whenReady().then(() => {
   registerIpc({
     ipcMain,
     services: {
-      config, cli, lock, gather, alterQueue, poller, setRects,
+      config, cli, lock, gather, alterQueue, poller, itemService, setRects,
       toggleClickThrough: toggleFullClickThrough,
       onConfigChanged: () => refreshTrayMenu(),
       quit: () => app.quit(),
