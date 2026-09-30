@@ -107,3 +107,22 @@ test('searchItems: 현재 캐릭터의 바뀐 라벨을 결과에도 쓴다', ()
   const r = searchItems({ query: '새록', liveItems: LIVE, liveJob: '사제', liveLabel: '사제(본캐)', snapshots: [] });
   assert.equal(r[0].sources[0].label, '사제(본캐)');
 });
+
+test('locateInSnapshots: 다른 캐릭터가 가진 재료를 이름별로 찾아준다', () => {
+  const { locateInSnapshots } = require('../main/item-search');
+  const found = locateInSnapshots({ names: ['새록 버섯', '통나무', '없는재료'], snapshots: SNAPSHOTS, excludeJob: '사제' });
+  assert.deepEqual(found['새록 버섯'], [{ label: '전사', savedAt: 500, inventory: 35, storage: 10, subtotal: 45 }]);
+  assert.deepEqual(found['통나무'], [{ label: '궁수(창고캐)', savedAt: 700, inventory: 0, storage: 20, subtotal: 20 }]);
+  assert.deepEqual(found['없는재료'], []);
+});
+
+test('locateInSnapshots: 현재 접속 직업은 제외하고, 많이 가진 캐릭터부터 준다', () => {
+  const { locateInSnapshots } = require('../main/item-search');
+  const snaps = [
+    { job: '사제', label: '사제', savedAt: 1, inventory: { 가죽: 999 }, characterStorage: {} },
+    { job: '전사', label: '전사', savedAt: 2, inventory: { 가죽: 5 }, characterStorage: {} },
+    { job: '궁수', label: '궁수', savedAt: 3, inventory: { 가죽: 50 }, characterStorage: {} },
+  ];
+  const found = locateInSnapshots({ names: ['가죽'], snapshots: snaps, excludeJob: '사제' });
+  assert.deepEqual(found['가죽'].map((s) => s.label), ['궁수', '전사']);
+});

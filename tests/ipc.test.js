@@ -23,10 +23,12 @@ function setup(responses) {
     config, cli, lock,
     gather: { isRunning: () => false, start: async (a) => { log.push(['gather.start', a]); }, stop: async () => log.push(['gather.stop']) },
     alterQueue: { enqueue: async (a) => { log.push(['enqueue', a]); }, pauseAuto: (v) => log.push(['pause', v]), isAutoPaused: () => true },
+    craftRunner: { isRunning: () => false, run: async (a) => { log.push(['craft.run', a]); return { ok: true }; } },
     poller: { refreshNow: async () => log.push(['refresh']) },
     itemService: {
       refresh: async () => { log.push(['items.refresh']); return { ok: true, liveJob: '사제', characters: [] }; },
       search: (q) => { log.push(['items.search', q]); return { results: [], liveJob: '사제', characters: [] }; },
+      locate: (names) => { log.push(['items.locate', names]); return {}; },
       rename: (job, label) => { log.push(['items.rename', job, label]); return []; },
       forget: (job) => { log.push(['items.forget', job]); return []; },
     },
@@ -106,6 +108,28 @@ test('아이템 찾기 채널이 itemService로 올바른 인자와 함께 연�
     ['items.rename', '사제', '사제(본캐)'],
     ['items.forget', '전사'],
   ]);
+});
+
+test('CRAFT_RUN은 craftRunner.run으로 이어지고, 실행 중이면 새로 시작하지 않는다', async () => {
+  const { handlers, log } = setup([]);
+  await handlers[CH.CRAFT_RUN]({ displayName: '실', craftCount: 3 });
+  assert.deepEqual(log, [['craft.run', { displayName: '실', craftCount: 3 }]]);
+});
+
+test('LIST_CRAFTABLE: 제작 미해금이면 items가 null이고 사유를 알려준다', async () => {
+  const locked = setup([{ stdout: '{"craftingUnlocked":false,"items":[]}' }]);
+  const r = await locked.handlers[CH.LIST_CRAFTABLE]();
+  assert.equal(r.items, null);
+  assert.match(r.message, /제작 기능/);
+
+  const open_ = setup([{ stdout: '{"craftingUnlocked":true,"items":[{"DisplayName":"실","ProducedPerCraft":2}]}' }]);
+  assert.deepEqual((await open_.handlers[CH.LIST_CRAFTABLE]()).items, [{ DisplayName: '실', ProducedPerCraft: 2 }]);
+});
+
+test('ITEMS_LOCATE는 재료 이름 목록을 그대로 넘긴다', async () => {
+  const { handlers, log } = setup([]);
+  await handlers[CH.ITEMS_LOCATE]({ names: ['가죽', '실'] });
+  assert.deepEqual(log, [['items.locate', ['가죽', '실']]]);
 });
 
 test('listOf: 배열 응답도 items로', () => {

@@ -1,6 +1,6 @@
 'use strict';
 const path = require('node:path');
-const { app, BrowserWindow, ipcMain, globalShortcut, screen, Tray, Menu, nativeImage } = require('electron');
+const { app, BrowserWindow, ipcMain, globalShortcut, Notification, screen, Tray, Menu, nativeImage } = require('electron');
 const CH = require('../shared/channels');
 const { createConfig } = require('./config');
 const { findCliPath, createCli } = require('./cli');
@@ -8,6 +8,8 @@ const { createLock } = require('./cli-lock');
 const { createAlteringPoller } = require('./altering');
 const { createGatherLoop } = require('./gather-loop');
 const { createAlterQueue } = require('./alter-queue');
+const { createCraftRunner } = require('./craft-runner');
+const { createCompletionNotifier } = require('./completion-notify');
 const { createConnectionMonitor } = require('./connection');
 const { createItemStore } = require('./item-store');
 const { createItemService } = require('./item-service');
@@ -128,11 +130,23 @@ app.whenReady().then(() => {
   const itemService = createItemService({ cli, lock, store: itemStore });
   const alterQueue = createAlterQueue({ cli, lock, config, onProgress: (p) => send(CH.EV_ALTER, p), onAutoEvent: (e) => send(CH.EV_AUTO, e) });
   const conn = createConnectionMonitor({ cli, lock, onChange: (s) => send(CH.EV_CONN, s) });
+  const completionNotifier = createCompletionNotifier({
+    getConfig: () => config.get(),
+    isAutoPaused: () => alterQueue.isAutoPaused(),
+    notify: (title, body) => {
+      if (Notification.isSupported()) new Notification({ title, body, silent: false }).show();
+    },
+  });
   const poller = createAlteringPoller({
     cli, lock,
-    onUpdate: (u) => { send(CH.EV_ALTERING, u); alterQueue.handleWorksUpdate(u).catch(() => {}); },
+    onUpdate: (u) => {
+      send(CH.EV_ALTERING, u);
+      completionNotifier.handleWorksUpdate(u);
+      alterQueue.handleWorksUpdate(u).catch(() => {});
+    },
     onError: (r) => conn.report(r),
   });
+  const craftRunner = createCraftRunner({ cli, lock, onProgress: (p) => send(CH.EV_CRAFT, p) });
   const gather = createGatherLoop({ cli, lock, onProgress: (p) => send(CH.EV_GATHER, p) });
 
   createWindow();
@@ -140,7 +154,7 @@ app.whenReady().then(() => {
   registerIpc({
     ipcMain,
     services: {
-      config, cli, lock, gather, alterQueue, poller, itemService, setRects,
+      config, cli, lock, gather, alterQueue, craftRunner, poller, itemService, setRects,
       toggleClickThrough: toggleFullClickThrough,
       onConfigChanged: () => refreshTrayMenu(),
       quit: () => app.quit(),

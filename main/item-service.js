@@ -1,10 +1,11 @@
 'use strict';
 const { PRIORITY } = require('./cli-lock');
-const { buildSnapshot, searchItems } = require('./item-search');
+const { buildSnapshot, searchItems, locateInSnapshots } = require('./item-search');
 
 // 검색창을 열 때 한 번만 CLI를 부르고(refresh), 타이핑할 때마다는 메모리에서 거른다(search).
 function createItemService({ cli, lock, store, now = Date.now }) {
   let live = null; // { items, job, at }
+  let lastKnownJob = null;
 
   async function refresh() {
     const { info, items } = await lock.run(PRIORITY.MANUAL, async () => ({
@@ -25,7 +26,7 @@ function createItemService({ cli, lock, store, now = Date.now }) {
 
     // 직업을 못 읽으면 어느 캐릭터 것인지 알 수 없으므로 저장하지 않는다(남의 칸을 덮어쓰지 않기 위해).
     let characters = store.all();
-    if (job) characters = store.save(buildSnapshot({ items: live.items, job, savedAt: at }));
+    if (job) { lastKnownJob = job; characters = store.save(buildSnapshot({ items: live.items, job, savedAt: at })); }
 
     return { ok: true, liveJob: job, refreshedAt: at, characters };
   }
@@ -50,9 +51,34 @@ function createItemService({ cli, lock, store, now = Date.now }) {
     };
   }
 
+  // 부족한 재료를 다른 캐릭터가 갖고 있는지 (CLI 추가 호출 없이 저장된 기록만 본다)
+  // 🔍를 연 적이 없으면 live가 비어 있어 현재 직업을 모른다. 그대로 두면 내 캐릭터의
+  // 지난 스냅샷이 "다른 캐릭터가 갖고 있다"로 나오므로, 직업만 가볍게 확인한다.
+  async function currentJob() {
+    if (live && live.job) return live.job;
+    if (lastKnownJob) return lastKnownJob;
+    const info = await lock.run(PRIORITY.MANUAL, () => cli.run('get_my_info'));
+    const job = (info.ok && info.body && info.body.EnabledCombatJobDisplayName) || null;
+    if (job) lastKnownJob = job;
+    return job;
+  }
+
+  async function locate(names) {
+    const snapshots = store.all();
+    const job = await currentJob();
+    return {
+      found: locateInSnapshots({ names, snapshots, excludeJob: job }),
+      // 현재 접속 캐릭터를 뺀, 참고할 수 있는 기록 수
+      characterCount: snapshots.filter((s) => s.job !== job).length,
+      // 직업을 못 읽어 현재 캐릭터를 제외하지 못했다면 화면에서 주의를 준다
+      currentUnknown: !job,
+    };
+  }
+
   return {
     refresh,
     search,
+    locate,
     rename: (job, label) => store.rename(job, label),
     forget: (job) => store.forget(job),
     characters: () => store.all(),
