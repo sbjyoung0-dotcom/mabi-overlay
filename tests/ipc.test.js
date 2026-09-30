@@ -94,6 +94,20 @@ test('STATUS_GET: fresh:true는 잠금이 바빠도 기다렸다가 값을 반�
   assert.deepEqual(await p, { wings: 10, weight: { current: 1, max: 2 } });
 });
 
+test('아이템 찾기 채널이 itemService로 올바른 인자와 함께 연결된다', async () => {
+  const { handlers, log } = setup([]);
+  assert.equal((await handlers[CH.ITEMS_REFRESH]()).liveJob, '사제');
+  assert.deepEqual((await handlers[CH.ITEMS_SEARCH]({ query: '버섯' })).results, []);
+  await handlers[CH.ITEMS_RENAME]({ job: '사제', label: '사제(본캐)' });
+  await handlers[CH.ITEMS_FORGET]({ job: '전사' });
+  assert.deepEqual(log, [
+    ['items.refresh'],
+    ['items.search', '버섯'],
+    ['items.rename', '사제', '사제(본캐)'],
+    ['items.forget', '전사'],
+  ]);
+});
+
 test('listOf: 배열 응답도 items로', () => {
   assert.deepEqual(listOf({ ok: true, body: [{ a: 1 }] }), { items: [{ a: 1 }] });
 });

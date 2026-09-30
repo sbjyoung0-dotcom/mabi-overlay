@@ -31,16 +31,22 @@ function createItemService({ cli, lock, store, now = Date.now }) {
   }
 
   function search(query) {
+    const characters = store.all();
+    const liveJob = live ? live.job : null;
+    const saved = liveJob ? characters.find((c) => c.job === liveJob) : null;
     return {
       results: searchItems({
         query,
         liveItems: live ? live.items : null,
-        liveJob: live ? live.job : null,
-        snapshots: store.all(),
+        liveJob,
+        liveLabel: saved ? saved.label : null,
+        snapshots: characters,
       }),
-      liveJob: live ? live.job : null,
+      liveJob,
+      // 직업을 못 읽으면 저장도 못 하고, 저장된 다른 기록과 중복될 수 있어 화면에서 알린다.
+      jobUnknown: !!live && !liveJob,
       refreshedAt: live ? live.at : null,
-      characters: store.all(),
+      characters,
     };
   }
 

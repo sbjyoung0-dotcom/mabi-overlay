@@ -110,3 +110,19 @@ test('refresh를 다시 하면 라벨은 지키고 개수만 갱신한다', asyn
     { job: '사제', label: '사제(본캐)', savedAt: 1000, inventory: { '새록 버섯': 99 }, characterStorage: {} },
   ]);
 });
+
+test('search: 직업을 못 읽어도 실시간 수치가 결과에 포함된다', async () => {
+  const { service } = setup((command) => (command === 'get_my_info' ? { stdout: '{"RealmName":"던컨"}' } : okItems));
+  await service.refresh();
+  const r = service.search('새록');
+  assert.equal(r.results[0].total, 400 + 12);
+  assert.equal(r.liveJob, null);
+  assert.equal(r.jobUnknown, true);
+});
+
+test('search: 이름을 바꾼 현재 캐릭터는 결과에도 바뀐 라벨로 나온다', async () => {
+  const { service } = setup((command) => (command === 'get_my_info' ? okInfo : okItems));
+  await service.refresh();
+  service.rename('사제', '사제(본캐)');
+  assert.equal(service.search('새록').results[0].sources[0].label, '사제(본캐)');
+});

@@ -16,10 +16,18 @@ window.ItemSearch = (() => {
     return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
   }
 
-  function renderNotice(message) {
+  function renderNotice({ message, stale, jobUnknown } = {}) {
+    let left = '현재 캐릭터 정보 없음';
+    if (state.liveJob) left = `${stale ? '마지막 갱신' : '현재 캐릭터'}: ${state.liveJob} · ${fmtWhen(state.refreshedAt)}${stale ? ' (새로고침 실패)' : ' 기준'}`;
+    else if (jobUnknown) left = `현재 캐릭터: 직업 확인 불가 · ${fmtWhen(state.refreshedAt)} 기준`;
     noticeBox.replaceChildren(
-      UI.el('span', { class: 'sub', text: state.liveJob ? `현재 캐릭터: ${state.liveJob} · ${fmtWhen(state.refreshedAt)} 기준` : '현재 캐릭터 정보 없음' }),
-      UI.el('span', { class: 'warn', text: message || '장비·의상·펫은 검색되지 않습니다 (CLI 미제공)' }),
+      UI.el('span', { class: 'sub', text: left }),
+      UI.el('span', {
+        class: 'warn',
+        text: message || (jobUnknown
+          ? '직업을 읽지 못해 저장되지 않았고, 다른 캐릭터 기록과 겹칠 수 있습니다'
+          : '장비·의상·펫은 검색되지 않습니다 (CLI 미제공)'),
+      }),
     );
   }
 
@@ -49,7 +57,12 @@ window.ItemSearch = (() => {
   // Electron 렌더러에서는 window.prompt를 쓸 수 없어 칩을 입력창으로 바꾼다.
   function startRename(chip, c) {
     const box = UI.el('input', { type: 'text', value: c.label, maxlength: '20' });
+    // Escape로 renderChars()를 하면 입력창이 DOM에서 빠지며 blur가 뒤따라 터진다.
+    // 그대로 두면 "취소"가 오히려 저장되므로 플래그로 막는다.
+    let cancelled = false;
     const commit = async () => {
+      if (cancelled) return;
+      cancelled = true;
       const label = box.value.trim();
       if (label && label !== c.label) state.characters = await M.invoke(CH.ITEMS_RENAME, { job: c.job, label });
       renderChars();
@@ -57,7 +70,7 @@ window.ItemSearch = (() => {
     };
     box.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') commit();
-      else if (e.key === 'Escape') renderChars();
+      else if (e.key === 'Escape') { cancelled = true; renderChars(); }
     });
     box.addEventListener('blur', commit);
     chip.replaceChildren(box);
@@ -98,6 +111,7 @@ window.ItemSearch = (() => {
     state.liveJob = r.liveJob;
     state.refreshedAt = r.refreshedAt;
     state.characters = r.characters;
+    state.jobUnknown = r.jobUnknown;
     renderResults(r.results);
   }
 
@@ -112,7 +126,7 @@ window.ItemSearch = (() => {
 
   async function open() {
     buildShell();
-    renderNotice('');
+    renderNotice();
     resultsBox.replaceChildren(UI.el('div', { class: 'sub', text: '불러오는 중...' }));
     $('items').classList.remove('hidden');
     input.focus();
@@ -121,7 +135,8 @@ window.ItemSearch = (() => {
     state.liveJob = r.liveJob;
     state.refreshedAt = r.refreshedAt;
     state.characters = r.characters || [];
-    renderNotice(r.ok ? '' : r.message);
+    state.jobUnknown = !r.ok ? false : !r.liveJob;
+    renderNotice({ message: r.ok ? '' : r.message, stale: !r.ok, jobUnknown: state.jobUnknown });
     renderChars();
     await doSearch();
   }

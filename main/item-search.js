@@ -25,7 +25,7 @@ function buildSnapshot({ items, job, label, savedAt }) {
   return { job, label: label || job, savedAt, inventory, characterStorage };
 }
 
-function searchItems({ query, liveItems, liveJob, snapshots }) {
+function searchItems({ query, liveItems, liveJob, liveLabel, snapshots }) {
   const q = String(query || '').trim().toLowerCase();
   if (!q) return [];
 
@@ -61,8 +61,13 @@ function searchItems({ query, liveItems, liveJob, snapshots }) {
     }
   };
 
-  if (liveJob) {
-    addSource({ job: liveJob, label: liveJob, savedAt: null, isLive: true, inventory: live.inventory, characterStorage: live.characterStorage });
+  // 직업을 못 읽어도(liveJob === null) 실시간 가방/개인창고는 반드시 집계한다.
+  // 직업은 "누구 것인지"를 말해줄 뿐이고, 개수가 사라질 이유는 아니다.
+  if (liveItems) {
+    addSource({
+      job: liveJob, label: liveLabel || liveJob || '현재 캐릭터', savedAt: null, isLive: true,
+      inventory: live.inventory, characterStorage: live.characterStorage,
+    });
   }
   for (const s of others) {
     addSource({ job: s.job, label: s.label || s.job, savedAt: s.savedAt, isLive: false, inventory: s.inventory, characterStorage: s.characterStorage });

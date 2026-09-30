@@ -95,3 +95,15 @@ test('searchItems: 게임 연결이 없어 실시간 값이 없어도 스냅샷�
 test('searchItems: 일치 항목이 없으면 빈 배열', () => {
   assert.deepEqual(searchItems({ query: '없는아이템', liveItems: LIVE, liveJob: '사제', snapshots: SNAPSHOTS }), []);
 });
+
+test('searchItems: 직업을 못 읽어도 실시간 가방/개인창고를 빠뜨리지 않는다', () => {
+  const r = searchItems({ query: '새록', liveItems: LIVE, liveJob: null, snapshots: [] });
+  assert.equal(r[0].total, 400 + 12);
+  assert.deepEqual(r[0].sources.map((s) => s.label), ['현재 캐릭터']);
+  assert.equal(r[0].sources[0].isLive, true);
+});
+
+test('searchItems: 현재 캐릭터의 바뀐 라벨을 결과에도 쓴다', () => {
+  const r = searchItems({ query: '새록', liveItems: LIVE, liveJob: '사제', liveLabel: '사제(본캐)', snapshots: [] });
+  assert.equal(r[0].sources[0].label, '사제(본캐)');
+});
