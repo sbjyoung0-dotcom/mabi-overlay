@@ -3,11 +3,19 @@
 마비노기 모바일 PC 클라이언트 위에 띄우는 투명 오버레이. 가공 시설 현황·수령, 채집/가공 즐겨찾기, 자동 재가공.
 게임 정보는 넥슨 공식 `MabinogiMobile_CLI.exe`를 직접 호출해서 받는다. AI 도구는 필요 없다.
 
-## 실행 전
-1. 게임 설정 → [게임/기타] → **MM AI 에이전트 활성화** 켜기 (CLI가 자동 설치됨)
-2. **MoFo 등 다른 CLI 호출 프로그램은 끈다** — 동시에 돌리면 응답이 섞인다
-3. CLI 위치가 기본(`C:\Nexon\MabinogiMobile\`)이 아니면 환경변수 `MABINOGI_CLI_PATH`에 전체 경로 지정
-4. CLI 기본 경로는 `C:\`, `D:\`, `E:\Nexon\MabinogiMobile\` 순으로 탐색한다.
+## 설치 (3단계)
+
+1. 게임 설정 → [게임/기타] → **MM AI 에이전트 활성화** 켜기 (이걸 켜면 넥슨 공식 CLI가 자동 설치된다)
+2. [Releases](https://github.com/sbjyoung0-dotcom/mabi-overlay/releases)에서 **`mabi-overlay-setup-x.y.z.exe`** 를 받아 더블클릭 → 설치가 끝나면 자동 실행되고 바탕화면에 바로가기가 생긴다
+   - "알 수 없는 게시자" 경고가 뜨면 **추가 정보 → 실행** (코드 서명이 없어서 나오는 경고)
+   - 관리자 권한은 필요 없다(사용자 폴더에 설치됨)
+3. MoFo 등 다른 CLI 호출 프로그램은 끄고 쓴다 — 동시에 돌리면 게임 응답이 섞인다
+
+업데이트는 새 setup 파일을 받아 다시 실행하면 덮어쓰기 된다. 설정·캐릭터 기록은 `%APPDATA%\mabi-overlay`에 있어 유지된다.
+제거는 Windows 설정 → 앱에서 "mabi-overlay" 제거.
+
+CLI가 기본 경로(`C:\`, `D:\`, `E:\Nexon\MabinogiMobile\` 순으로 탐색)에 없으면 환경변수 `MABINOGI_CLI_PATH`에 전체 경로를 지정한다.
+
 
 ## 개발
 ```
@@ -18,9 +26,10 @@ npm start
 
 ## 배포판 만들기
 ```
-npm run build
+npm run build        # 원클릭 설치 파일 → dist/mabi-overlay-setup-<버전>.exe
+npm run build:dir    # 압축 안 된 폴더 → dist/win-unpacked/ (개발 확인용)
 ```
-→ `dist/win-unpacked/mabi-overlay.exe` (폴더째 옮겨서 실행. 코드 서명 없음 → 첫 실행 시 SmartScreen "추가 정보 → 실행").
+코드 서명이 없어 첫 실행 시 SmartScreen 경고가 뜬다.
 
 ## 조작
 - 위젯 밖은 게임으로 클릭이 통과한다. **F8**: 위젯까지 완전 관통 토글.

@@ -7,7 +7,8 @@
   "scripts": {
     "start": "electron .",
     "test": "node --test \"tests/**/*.test.js\"",
-    "build": "electron-builder --win dir"
+    "build": "electron-builder --win nsis",
+    "build:dir": "electron-builder --win dir"
   },
   "build": {
     "appId": "local.mabi-overlay",
@@ -22,7 +23,19 @@
       "package.json"
     ],
     "win": {
-      "target": "dir"
+      "target": [
+        "nsis"
+      ],
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "mabi-overlay",
+      "artifactName": "mabi-overlay-setup-${version}.exe",
+      "deleteAppDataOnUninstall": false
     }
   },
   "devDependencies": {
