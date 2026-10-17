@@ -11,6 +11,12 @@
     const y = Math.min(Math.max(0, Math.round(rect.y)), maxY);
     return { x, y, changed: x !== rect.x || y !== rect.y };
   }
-  if (typeof module !== 'undefined' && module.exports) module.exports = { clampToBounds };
-  else root.Geometry = { clampToBounds };
+  // 숨긴 위젯은 화면에서 좌표를 읽을 수 없어 보고 대상에서 빠진다.
+  // 보고된 값만 덮어쓰고 나머지는 지켜야 다시 켰을 때 원래 자리로 돌아온다.
+  function mergePositions(prev, next) {
+    return { ...(prev || {}), ...(next || {}) };
+  }
+
+  if (typeof module !== 'undefined' && module.exports) module.exports = { clampToBounds, mergePositions };
+  else root.Geometry = { clampToBounds, mergePositions };
 })(typeof window !== 'undefined' ? window : globalThis);

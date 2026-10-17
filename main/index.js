@@ -49,8 +49,9 @@ function createWindow() {
   const bounds = overlayBounds();
   win = new BrowserWindow({
     ...bounds,
-    // resizable:false면 Windows가 창 최대 크기를 "한 모니터의 작업 영역"으로 제한해
-    // 여러 모니터를 덮을 수 없다. 생성 후 setBounds로 전체 영역을 잡는다.
+    // resizable:false면 Windows가 창 최대 크기를 작업 영역(예: 1920x1032)으로 제한해
+    // 작업 표시줄 위를 덮지 못한다. resizable로 두고 setBounds로 정확히 잡은 뒤
+    // will-resize를 막아 사용자가 크기를 바꾸지 못하게 한다.
     transparent: true, frame: false, alwaysOnTop: true, skipTaskbar: true, resizable: true, hasShadow: false,
     minWidth: 1, minHeight: 1, maximizable: false, fullscreenable: false, movable: false,
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false },
@@ -87,7 +88,7 @@ function syncWindowToDisplays() {
 // 숨김: 창 자체를 숨긴다(폴링도 쉰다). 다시 보이게 하는 건 트레이 메뉴/아이콘.
 function setOverlayVisible(visible) {
   if (!win || win.isDestroyed()) return;
-  if (visible) win.show(); else win.hide();
+  if (visible) win.showInactive(); else win.hide(); // show()는 게임에서 포커스를 빼앗는다
   lastOver = null;
   refreshTrayMenu();
 }
@@ -196,7 +197,7 @@ function createTray({ config, send }) {
     ]));
   }
 
-  tray.on('click', () => setOverlayVisible(!(win && win.isVisible())));
+  tray.on('click', () => setOverlayVisible(!(win && !win.isDestroyed() && win.isVisible())));
   refreshTrayMenu = buildTrayMenu;
   buildTrayMenu();
 }

@@ -10,7 +10,12 @@ window.Interact = (() => {
 
   // 저장된 좌표가 창 밖이면(모니터를 빼거나 배치가 바뀐 뒤) 위젯이 화면에서 사라진다.
   // 항상 창 안으로 당겨 넣고, 당겨졌으면 저장된 좌표도 고쳐 둔다.
-  let clampSaving = false; // 클램프가 유발한 저장이 다시 클램프 저장을 부르지 않게
+  // 저장은 보고된 위젯만 덮어쓴다 — 숨긴 위젯의 좌표를 지우지 않기 위해.
+  function savePositions() {
+    onMove(Geometry.mergePositions(getPositions(), readPositions()));
+  }
+
+  // 클램프 결과는 정수라 멱등하다 → 저장 후 다시 적용해도 값이 바뀌지 않아 루프가 생기지 않는다.
   function applyPositions(positions) {
     let fixed = false;
     for (const [key, pos] of Object.entries(positions || {})) {
@@ -24,16 +29,16 @@ window.Interact = (() => {
       el.style.top = `${c.y}px`;
       if (c.changed) fixed = true;
     }
-    if (fixed && !clampSaving) {
-      clampSaving = true;
-      try { onMove(readPositions()); } finally { clampSaving = false; }
-    }
+    if (fixed) savePositions();
   }
 
   function readPositions() {
     const out = {};
     for (const w of document.querySelectorAll('.widget[data-widget]')) {
       if (w.classList.contains('modal')) continue; // 모달은 CSS로 화면 중앙에 고정된다
+      // 숨긴 위젯(display:none)은 offsetLeft가 0이다. 그대로 저장하면 다시 켰을 때
+      // 좌상단으로 가 버리므로 보고에서 제외하고 기존 좌표를 지킨다.
+      if (w.classList.contains('hidden')) continue;
       out[w.dataset.widget] = { x: w.offsetLeft, y: w.offsetTop };
     }
     return out;
@@ -84,7 +89,7 @@ window.Interact = (() => {
       if (!drag) return;
       drag.el.classList.remove('dragging');
       drag = null;
-      onMove(readPositions());
+      savePositions();
     });
     document.addEventListener('keydown', (e) => {
       if (e.key === 'F8') { e.preventDefault(); M.invoke(CH.CLICKTHROUGH_TOGGLE); }

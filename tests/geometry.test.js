@@ -37,3 +37,20 @@ test('소수점 크기에서도 정수 좌표를 돌려준다 (저장↔재적�
   const again = clampToBounds({ x: r.x, y: r.y, w: 259.4, h: 80 }, { width: 1920, height: 1080 });
   assert.deepEqual(again, { x: 1660, y: 10, changed: false });
 });
+
+const { mergePositions } = require('../shared/geometry');
+
+test('mergePositions: 빠진 위젯(숨김 등)의 기존 좌표를 지키고 새 값만 덮어쓴다', () => {
+  const prev = { altering: { x: 10, y: 10 }, craft: { x: 700, y: 400 } };
+  const next = { altering: { x: 50, y: 60 } };            // craft는 숨겨져 보고되지 않음
+  assert.deepEqual(mergePositions(prev, next), {
+    altering: { x: 50, y: 60 },
+    craft: { x: 700, y: 400 },
+  });
+});
+
+test('mergePositions: null 안전', () => {
+  assert.deepEqual(mergePositions(null, { a: { x: 1, y: 2 } }), { a: { x: 1, y: 2 } });
+  assert.deepEqual(mergePositions({ a: { x: 1, y: 2 } }, null), { a: { x: 1, y: 2 } });
+  assert.deepEqual(mergePositions(null, null), {});
+});
