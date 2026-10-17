@@ -80,6 +80,19 @@ window.Settings = (() => {
     ]));
     root.append(UI.el('p', { class: 'warn', text: '제작은 버튼 한 번으로 이동·제작·수령까지 끝나며, 횟수와 관계없이 정령의 날개 5개를 씁니다. 시설마다 한 번에 가능한 최대 횟수가 있어 초과하면 최대 횟수를 알려줍니다.' }));
 
+    root.append(UI.el('h3', { text: '위젯 표시' }));
+    const widgetRow = UI.el('div', { class: 'add-row' });
+    for (const [key, label] of [['gather', '채집'], ['alter', '가공 등록'], ['craft', '제작']]) {
+      const c = UI.el('input', {
+        type: 'checkbox',
+        onchange: (e) => save({ visibleWidgets: { ...(cfg.visibleWidgets || {}), [key]: e.target.checked } }),
+      });
+      c.checked = (cfg.visibleWidgets || {})[key] !== false;
+      widgetRow.append(UI.el('label', {}, [c, ` ${label}`]));
+    }
+    root.append(widgetRow);
+    root.append(UI.el('p', { class: 'sub', text: '가공 현황은 툴바(⚙·🔍·🙈·✕)를 품고 있어 항상 표시됩니다. 전체를 숨기려면 🙈를 쓰세요.' }));
+
     root.append(UI.el('h3', { text: '알림' }));
     const notifyChk = UI.el('input', { type: 'checkbox', onchange: (e) => save({ notifyOnComplete: e.target.checked }) });
     notifyChk.checked = cfg.notifyOnComplete !== false;

@@ -5,23 +5,29 @@ window.Interact = (() => {
   let isLocked = () => true;
   let onMove = () => {};
   let drag = null;
+  let getPositions = () => null;
   let rectsPending = false;
 
   // 저장된 좌표가 창 밖이면(모니터를 빼거나 배치가 바뀐 뒤) 위젯이 화면에서 사라진다.
   // 항상 창 안으로 당겨 넣고, 당겨졌으면 저장된 좌표도 고쳐 둔다.
+  let clampSaving = false; // 클램프가 유발한 저장이 다시 클램프 저장을 부르지 않게
   function applyPositions(positions) {
     let fixed = false;
     for (const [key, pos] of Object.entries(positions || {})) {
       const el = document.querySelector(`.widget[data-widget="${key}"]`);
       if (!el) continue;
       const r = el.getBoundingClientRect();
+      if (r.width === 0 || r.height === 0) continue; // 숨긴 위젯은 건너뛴다
       const c = Geometry.clampToBounds({ x: pos.x, y: pos.y, w: r.width, h: r.height },
         { width: window.innerWidth, height: window.innerHeight });
       el.style.left = `${c.x}px`;
       el.style.top = `${c.y}px`;
       if (c.changed) fixed = true;
     }
-    if (fixed) onMove(readPositions());
+    if (fixed && !clampSaving) {
+      clampSaving = true;
+      try { onMove(readPositions()); } finally { clampSaving = false; }
+    }
   }
 
   function readPositions() {
@@ -52,6 +58,15 @@ window.Interact = (() => {
   function init(opts) {
     isLocked = opts.isLocked;
     onMove = opts.onMove;
+    getPositions = opts.getPositions || (() => null);
+
+    // 창 크기가 바뀌면(모니터 변경 등) 레이아웃이 반영된 뒤에 다시 당겨 넣는다.
+    // 메인의 setBounds 직후에는 innerWidth가 아직 옛 값일 수 있어 resize를 기다린다.
+    let resizeTimer = null;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => { applyPositions(getPositions()); reportRects(); }, 120);
+    });
 
     document.addEventListener('mousemove', (e) => {
       if (drag) { drag.el.style.left = `${e.clientX - drag.dx}px`; drag.el.style.top = `${e.clientY - drag.dy}px`; }

@@ -20,6 +20,7 @@
     ITEMS_LOCATE: 'items:locate',
     ITEMS_RENAME: 'items:rename',
     ITEMS_FORGET: 'items:forget',
+    WINDOW_HIDE: 'window:hide',
     WINDOW_QUIT: 'window:quit',
     WINDOW_RECTS: 'window:set-rects',
     CLICKTHROUGH_TOGGLE: 'window:toggle-clickthrough',

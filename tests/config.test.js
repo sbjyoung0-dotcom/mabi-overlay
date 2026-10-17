@@ -38,3 +38,8 @@ test('깨진 파일은 기본값으로 대체', () => {
   fs.writeFileSync(file, '{oops', 'utf8');
   assert.deepEqual(createConfig({ filePath: file }).get(), DEFAULTS);
 });
+
+test('기본값에 위젯 표시 설정이 있다 (가공 현황은 항상 표시이므로 제외)', () => {
+  const v = createConfig({ filePath: tmpFile() }).get().visibleWidgets;
+  assert.deepEqual(v, { gather: true, alter: true, craft: true });
+});
