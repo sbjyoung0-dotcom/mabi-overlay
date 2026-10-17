@@ -35,13 +35,17 @@ function overlayBounds() {
 }
 
 function createWindow() {
-  const { x, y, width, height } = overlayBounds();
+  const bounds = overlayBounds();
   win = new BrowserWindow({
-    x, y, width, height,
-    transparent: true, frame: false, alwaysOnTop: true, skipTaskbar: true, resizable: false, hasShadow: false,
+    ...bounds,
+    // resizable:false면 Windows가 창 최대 크기를 "한 모니터의 작업 영역"으로 제한해
+    // 여러 모니터를 덮을 수 없다. 생성 후 setBounds로 전체 영역을 잡는다.
+    transparent: true, frame: false, alwaysOnTop: true, skipTaskbar: true, resizable: true, hasShadow: false,
+    minWidth: 1, minHeight: 1, maximizable: false, fullscreenable: false, movable: false,
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false },
   });
   win.setAlwaysOnTop(true, 'screen-saver');
+  win.setBounds(bounds);            // 생성 시 제한을 받았을 수 있어 다시 지정
   win.setIgnoreMouseEvents(true, { forward: true });
   win.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'));
 }
@@ -50,7 +54,9 @@ function createWindow() {
 // 위젯 좌표는 창 기준이라, 렌더러가 창 안으로 다시 당겨 넣도록 알린다.
 function syncWindowToDisplays() {
   if (!win || win.isDestroyed()) return;
-  win.setBounds(overlayBounds());
+  const b = overlayBounds();
+  win.setBounds(b);
+  if (win.getBounds().width < b.width) win.setBounds(b); // 제한에 걸리면 한 번 더
   lastOver = null;
   win.webContents.send(CH.EV_DISPLAYS);
 }
