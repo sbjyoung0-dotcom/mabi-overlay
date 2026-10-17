@@ -13,7 +13,7 @@ function listOf(r) {
 }
 
 function registerIpc({ ipcMain, services }) {
-  const { config, cli, lock, gather, alterQueue, craftRunner, poller, itemService, setRects, toggleClickThrough, onConfigChanged, quit } = services;
+  const { config, cli, lock, gather, alterQueue, craftRunner, poller, itemService, setRects, hideOverlay, toggleClickThrough, onConfigChanged, quit } = services;
   const h = (ch, fn) => ipcMain.handle(ch, (_event, payload) => fn(payload));
 
   h(CH.CONFIG_GET, () => config.get());
@@ -64,6 +64,7 @@ function registerIpc({ ipcMain, services }) {
   h(CH.ITEMS_RENAME, ({ job, label }) => itemService.rename(job, label));
   h(CH.ITEMS_FORGET, ({ job }) => itemService.forget(job));
 
+  h(CH.WINDOW_HIDE, () => { hideOverlay(); return true; });
   h(CH.WINDOW_QUIT, () => { quit(); return true; });
   h(CH.WINDOW_RECTS, (rects) => { setRects(rects); return true; });
   h(CH.CLICKTHROUGH_TOGGLE, () => { toggleClickThrough(); return true; });

@@ -15,8 +15,10 @@ const { createItemStore } = require('./item-store');
 const { createItemService } = require('./item-service');
 const { registerIpc } = require('./ipc');
 const { isOverAny, toWindowPoint } = require('./hit-test');
+const { pickDisplay, displayLabel } = require('./display-pick');
 
 const POLL_MS = 50;
+const DEFAULT_POSITIONS = Object.freeze({ altering: { x: 100, y: 100 }, gather: { x: 100, y: 320 }, alter: { x: 100, y: 460 }, craft: { x: 100, y: 600 } });
 
 let win = null;
 let fullClickThrough = false;
@@ -26,17 +28,69 @@ let lastOver = null;
 let pollTimer = null;
 let tray = null; // GC 방지용 모듈 스코프 참조
 let refreshTrayMenu = () => {};
+let currentConfig = null;
+
+// 오버레이 창은 한 모니터 안에만 둔다. 여러 모니터를 한 창으로 덮으면 주사율이
+// 다른 환경에서 해당 모니터 출력이 멈춘다(실측 144/120/60Hz). 모니터는 사용자가 고른다.
+function targetDisplay() {
+  return pickDisplay(screen.getAllDisplays(), {
+    preferredId: currentConfig ? currentConfig.get().displayId : null,
+    preferredBounds: currentConfig ? currentConfig.get().displayBounds : null,
+    primaryId: screen.getPrimaryDisplay().id,
+  });
+}
+
+function overlayBounds() {
+  const d = targetDisplay();
+  return d ? { ...d.bounds } : { x: 0, y: 0, ...screen.getPrimaryDisplay().bounds };
+}
 
 function createWindow() {
-  const { width, height } = screen.getPrimaryDisplay().bounds;
+  const bounds = overlayBounds();
   win = new BrowserWindow({
-    x: 0, y: 0, width, height,
-    transparent: true, frame: false, alwaysOnTop: true, skipTaskbar: true, resizable: false, hasShadow: false,
+    ...bounds,
+    // resizable:false면 Windows가 창 최대 크기를 작업 영역(예: 1920x1032)으로 제한해
+    // 작업 표시줄 위를 덮지 못한다. resizable로 두고 setBounds로 정확히 잡은 뒤
+    // will-resize를 막아 사용자가 크기를 바꾸지 못하게 한다.
+    transparent: true, frame: false, alwaysOnTop: true, skipTaskbar: true, resizable: true, hasShadow: false,
+    minWidth: 1, minHeight: 1, maximizable: false, fullscreenable: false, movable: false,
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false },
   });
   win.setAlwaysOnTop(true, 'screen-saver');
+  win.setBounds(bounds);            // 생성 시 제한을 받았을 수 있어 다시 지정
+  win.on('will-resize', (e) => e.preventDefault()); // 사용자가 창 크기를 바꾸지 못하게
   win.setIgnoreMouseEvents(true, { forward: true });
   win.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'));
+}
+
+// 모니터를 꽂거나 빼거나 해상도를 바꾸면 창 크기를 다시 맞춘다.
+// 위젯 좌표는 창 기준이라, 렌더러가 창 안으로 다시 당겨 넣도록 알린다.
+// 모니터를 꽂거나 빼거나 해상도를 바꾸거나, 사용자가 표시 모니터를 바꾸면 창을 옮긴다.
+// 위젯 좌표는 창 기준이라, 렌더러가 창 안으로 다시 당겨 넣도록 알린다.
+let syncTimer = null;
+function syncWindowToDisplays() {
+  if (syncTimer) clearTimeout(syncTimer);
+  syncTimer = setTimeout(() => {
+    syncTimer = null;
+    if (!win || win.isDestroyed()) return;
+    const b = overlayBounds();
+    win.setBounds(b);
+    const got = win.getBounds();
+    if (got.width !== b.width || got.height !== b.height) {
+      console.error('[overlay] 창 크기를 맞추지 못했습니다', { 요청: b, 실제: got });
+    }
+    lastOver = null;
+    win.webContents.send(CH.EV_DISPLAYS);
+    refreshTrayMenu();
+  }, 150);
+}
+
+// 숨김: 창 자체를 숨긴다(폴링도 쉰다). 다시 보이게 하는 건 트레이 메뉴/아이콘.
+function setOverlayVisible(visible) {
+  if (!win || win.isDestroyed()) return;
+  if (visible) win.showInactive(); else win.hide(); // show()는 게임에서 포커스를 빼앗는다
+  lastOver = null;
+  refreshTrayMenu();
 }
 
 // 위젯 위에 마우스가 있을 때만 클릭을 받는다. F8 완전 관통 중에는 무시.
@@ -55,7 +109,7 @@ function setRects(newRects) {
 // 게임 창이 앞에 있으면 마우스 훅/전역 단축키가 전달되지 않으므로, 커서 위치를 직접 폴링해서 판정한다.
 function startCursorPolling() {
   pollTimer = setInterval(() => {
-    if (!win || win.isDestroyed() || fullClickThrough) return;
+    if (!win || win.isDestroyed() || fullClickThrough || !win.isVisible()) return;
     const over = isOverAny(toWindowPoint(screen.getCursorScreenPoint(), win.getBounds()), rects);
     if (over !== lastOver) {
       lastOver = over;
@@ -98,7 +152,27 @@ function createTray({ config, send }) {
   tray.setToolTip('mabi-overlay');
 
   function buildTrayMenu() {
+    // 왼쪽→오른쪽 순으로 번호를 붙인다 (Windows 디스플레이 설정에서 보는 배치와 같은 순서)
+    const displays = [...screen.getAllDisplays()].sort((a, b) => a.bounds.x - b.bounds.x || a.bounds.y - b.bounds.y);
+    const primaryId = screen.getPrimaryDisplay().id;
+    const currentId = targetDisplay() ? targetDisplay().id : primaryId;
     tray.setContextMenu(Menu.buildFromTemplate([
+      {
+        label: '오버레이 보이기',
+        type: 'checkbox',
+        checked: !!win && !win.isDestroyed() && win.isVisible(),
+        click: (item) => setOverlayVisible(item.checked),
+      },
+      {
+        label: '표시 모니터',
+        submenu: displays.map((d, i) => ({
+          label: displayLabel(d, i, primaryId),
+          type: 'radio',
+          checked: d.id === currentId,
+          click: () => { config.set({ displayId: d.id, displayBounds: { ...d.bounds } }); syncWindowToDisplays(); },
+        })),
+      },
+      { type: 'separator' },
       { label: '완전 관통 모드', type: 'checkbox', checked: fullClickThrough, click: toggleFullClickThrough },
       {
         label: '위치 잠금',
@@ -111,17 +185,26 @@ function createTray({ config, send }) {
           buildTrayMenu();
         },
       },
+      {
+        label: '위젯 위치 초기화',
+        click: () => {
+          config.set({ positions: DEFAULT_POSITIONS });
+          send(CH.EV_CONFIG, config.get());
+        },
+      },
       { type: 'separator' },
       { label: '종료', click: () => app.quit() },
     ]));
   }
 
+  tray.on('click', () => setOverlayVisible(!(win && !win.isDestroyed() && win.isVisible())));
   refreshTrayMenu = buildTrayMenu;
   buildTrayMenu();
 }
 
 app.whenReady().then(() => {
   const config = createConfig({ filePath: path.join(app.getPath('appData'), 'mabi-overlay', 'config.json') });
+  currentConfig = config;
   cli = createCli({ cliPath: findCliPath() });
   const lock = createLock();
   const send = (ch, data) => { if (win && !win.isDestroyed()) win.webContents.send(ch, data); };
@@ -155,11 +238,15 @@ app.whenReady().then(() => {
     ipcMain,
     services: {
       config, cli, lock, gather, alterQueue, craftRunner, poller, itemService, setRects,
+      hideOverlay: () => setOverlayVisible(false),
       toggleClickThrough: toggleFullClickThrough,
       onConfigChanged: () => refreshTrayMenu(),
       quit: () => app.quit(),
     },
   });
+  for (const ev of ['display-added', 'display-removed', 'display-metrics-changed']) {
+    screen.on(ev, syncWindowToDisplays);
+  }
   globalShortcut.register('F8', toggleFullClickThrough);
   win.webContents.on('did-finish-load', () => { conn.start(); poller.start(); });
   startCursorPolling();

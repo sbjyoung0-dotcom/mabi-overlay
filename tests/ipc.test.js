@@ -33,6 +33,7 @@ function setup(responses) {
       forget: (job) => { log.push(['items.forget', job]); return []; },
     },
     setRects: (v) => log.push(['rects', v]),
+    hideOverlay: () => log.push(['hide']),
     toggleClickThrough: () => log.push(['clickthrough-toggle']),
     onConfigChanged: () => log.push(['config-changed']),
     quit: () => log.push(['quit']),

@@ -44,6 +44,15 @@
     }
   }
 
+  // 안 쓰는 위젯은 숨긴다. 숨긴 위젯은 마우스 판정에서도 빠져 게임 클릭을 막지 않는다.
+  function applyWidgetVisibility() {
+    const vis = config.visibleWidgets || {};
+    for (const key of ['gather', 'alter', 'craft']) {
+      const el = document.querySelector(`.widget[data-widget="${key}"]`);
+      if (el) el.classList.toggle('hidden', vis[key] === false);
+    }
+  }
+
   function renderButtons() {
     GatherPanel.renderButtons(config, startGather, busy());
     AlterPanel.renderButtons(config, startAlter, busy());
@@ -120,17 +129,26 @@
   function rerender() {
     document.body.classList.toggle('unlocked', !config.locked);
     $('btn-lock').textContent = config.locked ? '🔒' : '✋';
-    Interact.applyPositions(config.positions);
     AlteringHud.render(lastUpdate, config, collect, busy());
     renderButtons();
+    applyWidgetVisibility();
+    // 위젯 내용이 채워진 뒤에 위치를 적용해야 크기 기준 클램프가 정확하다
+    Interact.applyPositions(config.positions);
   }
 
-  Interact.init({ isLocked: () => config.locked, onMove: (positions) => setConfig({ positions }) });
+  Interact.init({
+    isLocked: () => config.locked,
+    onMove: (positions) => setConfig({ positions }),
+    getPositions: () => config.positions,
+  });
   M.on(CH.EV_ALTERING, (u) => { lastUpdate = u; AlteringHud.render(u, config, collect, busy()); });
   // 트레이의 위치 잠금 토글 등 외부에서 config가 바뀐 경우 (M.invoke를 거치지 않았으므로 여기서만 반영된다)
+  // 모니터를 꽂거나 빼면 창 크기가 바뀐다 → 위젯을 창 안으로 다시 당겨 넣는다
+  M.on(CH.EV_DISPLAYS, () => rerender());
   M.on(CH.EV_CONFIG, (c) => { config = c; rerender(); Settings.refresh(); });
   $('btn-layout').addEventListener('click', () => setConfig({ layout: config.layout === '1row' ? '2row' : '1row' }));
   $('btn-lock').addEventListener('click', () => setConfig({ locked: !config.locked }));
+  $('btn-hide').addEventListener('click', () => M.invoke(CH.WINDOW_HIDE));
   $('btn-quit').addEventListener('click', () => M.invoke(CH.WINDOW_QUIT));
   $('btn-items').addEventListener('click', () => ItemSearch.open());
   $('btn-items-close').addEventListener('click', () => ItemSearch.close());

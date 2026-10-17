@@ -20,6 +20,7 @@
     ITEMS_LOCATE: 'items:locate',
     ITEMS_RENAME: 'items:rename',
     ITEMS_FORGET: 'items:forget',
+    WINDOW_HIDE: 'window:hide',
     WINDOW_QUIT: 'window:quit',
     WINDOW_RECTS: 'window:set-rects',
     CLICKTHROUGH_TOGGLE: 'window:toggle-clickthrough',
@@ -32,6 +33,7 @@
     EV_CONN: 'conn:status',
     EV_CLICKTHROUGH: 'clickthrough:changed',
     EV_CONFIG: 'config:changed',
+    EV_DISPLAYS: 'displays:changed',
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = CH;
   else root.CH = CH;
