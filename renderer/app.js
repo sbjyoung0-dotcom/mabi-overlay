@@ -128,6 +128,8 @@
   Interact.init({ isLocked: () => config.locked, onMove: (positions) => setConfig({ positions }) });
   M.on(CH.EV_ALTERING, (u) => { lastUpdate = u; AlteringHud.render(u, config, collect, busy()); });
   // 트레이의 위치 잠금 토글 등 외부에서 config가 바뀐 경우 (M.invoke를 거치지 않았으므로 여기서만 반영된다)
+  // 모니터를 꽂거나 빼면 창 크기가 바뀐다 → 위젯을 창 안으로 다시 당겨 넣는다
+  M.on(CH.EV_DISPLAYS, () => rerender());
   M.on(CH.EV_CONFIG, (c) => { config = c; rerender(); Settings.refresh(); });
   $('btn-layout').addEventListener('click', () => setConfig({ layout: config.layout === '1row' ? '2row' : '1row' }));
   $('btn-lock').addEventListener('click', () => setConfig({ locked: !config.locked }));

@@ -7,11 +7,21 @@ window.Interact = (() => {
   let drag = null;
   let rectsPending = false;
 
+  // 저장된 좌표가 창 밖이면(모니터를 빼거나 배치가 바뀐 뒤) 위젯이 화면에서 사라진다.
+  // 항상 창 안으로 당겨 넣고, 당겨졌으면 저장된 좌표도 고쳐 둔다.
   function applyPositions(positions) {
+    let fixed = false;
     for (const [key, pos] of Object.entries(positions || {})) {
-      const w = document.querySelector(`.widget[data-widget="${key}"]`);
-      if (w) { w.style.left = `${pos.x}px`; w.style.top = `${pos.y}px`; }
+      const el = document.querySelector(`.widget[data-widget="${key}"]`);
+      if (!el) continue;
+      const r = el.getBoundingClientRect();
+      const c = Geometry.clampToBounds({ x: pos.x, y: pos.y, w: r.width, h: r.height },
+        { width: window.innerWidth, height: window.innerHeight });
+      el.style.left = `${c.x}px`;
+      el.style.top = `${c.y}px`;
+      if (c.changed) fixed = true;
     }
+    if (fixed) onMove(readPositions());
   }
 
   function readPositions() {

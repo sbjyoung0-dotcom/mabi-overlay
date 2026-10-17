@@ -7,7 +7,9 @@ const path = require('node:path');
 // 브라우저 전용 스크립트(require 없음)라 실행은 안 하고 구문만 검사한다.
 const rendererDir = path.join(__dirname, '..', 'renderer');
 const rendererFiles = fs.readdirSync(rendererDir).filter((f) => f.endsWith('.js')).map((f) => path.join(rendererDir, f));
-const files = [...rendererFiles, path.join(__dirname, '..', 'shared', 'channels.js')];
+const sharedDir = path.join(__dirname, '..', 'shared');
+const sharedFiles = fs.readdirSync(sharedDir).filter((f) => f.endsWith('.js')).map((f) => path.join(sharedDir, f));
+const files = [...rendererFiles, ...sharedFiles];
 
 for (const file of files) {
   test(`구문 검사: ${path.relative(path.join(__dirname, '..'), file)}`, () => {

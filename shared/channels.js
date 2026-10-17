@@ -32,6 +32,7 @@
     EV_CONN: 'conn:status',
     EV_CLICKTHROUGH: 'clickthrough:changed',
     EV_CONFIG: 'config:changed',
+    EV_DISPLAYS: 'displays:changed',
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = CH;
   else root.CH = CH;

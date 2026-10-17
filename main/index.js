@@ -15,8 +15,10 @@ const { createItemStore } = require('./item-store');
 const { createItemService } = require('./item-service');
 const { registerIpc } = require('./ipc');
 const { isOverAny, toWindowPoint } = require('./hit-test');
+const { unionBounds } = require('./display-union');
 
 const POLL_MS = 50;
+const DEFAULT_POSITIONS = Object.freeze({ altering: { x: 100, y: 100 }, gather: { x: 100, y: 320 }, alter: { x: 100, y: 460 }, craft: { x: 100, y: 600 } });
 
 let win = null;
 let fullClickThrough = false;
@@ -27,16 +29,30 @@ let pollTimer = null;
 let tray = null; // GC 방지용 모듈 스코프 참조
 let refreshTrayMenu = () => {};
 
+// 모든 모니터를 덮는 하나의 창. 주 모니터만 덮으면 위젯을 보조 모니터로 끌었을 때 사라진다.
+function overlayBounds() {
+  return unionBounds(screen.getAllDisplays()) || { x: 0, y: 0, ...screen.getPrimaryDisplay().bounds };
+}
+
 function createWindow() {
-  const { width, height } = screen.getPrimaryDisplay().bounds;
+  const { x, y, width, height } = overlayBounds();
   win = new BrowserWindow({
-    x: 0, y: 0, width, height,
+    x, y, width, height,
     transparent: true, frame: false, alwaysOnTop: true, skipTaskbar: true, resizable: false, hasShadow: false,
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false },
   });
   win.setAlwaysOnTop(true, 'screen-saver');
   win.setIgnoreMouseEvents(true, { forward: true });
   win.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'));
+}
+
+// 모니터를 꽂거나 빼거나 해상도를 바꾸면 창 크기를 다시 맞춘다.
+// 위젯 좌표는 창 기준이라, 렌더러가 창 안으로 다시 당겨 넣도록 알린다.
+function syncWindowToDisplays() {
+  if (!win || win.isDestroyed()) return;
+  win.setBounds(overlayBounds());
+  lastOver = null;
+  win.webContents.send(CH.EV_DISPLAYS);
 }
 
 // 위젯 위에 마우스가 있을 때만 클릭을 받는다. F8 완전 관통 중에는 무시.
@@ -111,6 +127,13 @@ function createTray({ config, send }) {
           buildTrayMenu();
         },
       },
+      {
+        label: '위젯 위치 초기화',
+        click: () => {
+          config.set({ positions: DEFAULT_POSITIONS });
+          send(CH.EV_CONFIG, config.get());
+        },
+      },
       { type: 'separator' },
       { label: '종료', click: () => app.quit() },
     ]));
@@ -160,6 +183,9 @@ app.whenReady().then(() => {
       quit: () => app.quit(),
     },
   });
+  for (const ev of ['display-added', 'display-removed', 'display-metrics-changed']) {
+    screen.on(ev, syncWindowToDisplays);
+  }
   globalShortcut.register('F8', toggleFullClickThrough);
   win.webContents.on('did-finish-load', () => { conn.start(); poller.start(); });
   startCursorPolling();
