@@ -5,7 +5,9 @@ const { isCompleted } = require('./altering');
 const WINGS_PER_CALL = 5;
 
 const REJECT_MESSAGES = {
-  not_enough_ingredient: '재료 부족', not_available: '큐가 가득 참', not_enough_currency: '정령의 날개 부족', disconnected: '게임 연결 끊김',
+  not_enough_ingredient: '재료 부족', not_available: '지금은 가공할 수 없음', not_enough_currency: '정령의 날개 부족', disconnected: '게임 연결 끊김',
+  // 게임 업데이트로 추가된 코드 (이전에는 not_available로 왔다)
+  queue_full: '가공 큐가 가득 참 — 완료된 가공을 먼저 수령하세요',
   requires_user_interaction: '게임에서 직접 시작해야 하는 레시피', insufficient_facility_level: '시설 레벨 부족',
   ingredient_locked: '재료 잠김', insufficient_transfer_cost: '이송 비용 부족', blocked: '게임 화면 확인 필요',
   not_in_field: '필드가 아님', overweight: '무게 초과', facility_not_found: '시설 없음', not_found: '레시피 없음',
@@ -15,13 +17,18 @@ const REJECT_MESSAGES = {
 };
 
 // execute_altering / complete_altering_work 결과 해석
+// 모르는 코드가 와도 CLI의 영어 문장을 그대로 띄우지 않는다. 코드만 한글 틀에 담아 보여준다.
+function describe(reason) {
+  return REJECT_MESSAGES[reason] || `처리 실패 (${reason})`;
+}
+
 function interpretAlterResult(r) {
   if (!r.ok) {
     const reason = r.error || r.kind;
-    return { ok: false, reason, message: REJECT_MESSAGES[reason] || r.message || reason };
+    return { ok: false, reason, message: describe(reason) };
   }
   const b = r.body || {};
-  if (b.error) return { ok: false, reason: b.error, message: REJECT_MESSAGES[b.error] || b.message || b.error, cost: b.cost };
+  if (b.error) return { ok: false, reason: b.error, message: describe(b.error), cost: b.cost };
   return { ok: true, result: b.result, cost: b.cost, collected: b.collected };
 }
 
@@ -138,7 +145,13 @@ function createAlterQueue({ cli, lock, config, onProgress = () => {}, onAutoEven
             let ok = true;
             for (let i = 0; i < count; i++) {
               const it = interpretAlterResult(await cli.run('execute_altering', { displayName }));
-              if (!it.ok) { failItem(displayName, it.message); ok = false; break; }
+              if (!it.ok) {
+                // 큐가 가득 찬 건 일시적이다(수령하면 풀린다) → 실패로 세어 자동 재가공을 끄지 않는다.
+                if (it.reason === 'queue_full') onAutoEvent({ type: 'skipped', displayName, message: it.message });
+                else failItem(displayName, it.message);
+                ok = false;
+                break;
+              }
               const autoSpentWings = addAutoSpent(config, WINGS_PER_CALL, now());
               onAutoEvent({ type: 'requeued', displayName, index: i + 1, count, autoSpentWings });
             }

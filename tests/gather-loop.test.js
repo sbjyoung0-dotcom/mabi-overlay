@@ -121,3 +121,16 @@ test('loop: 실행 중 start는 거부', async () => {
   await assert.rejects(loop.start({ displayName: 'b', repeat: 1 }), /already running/);
   release(); await p;
 });
+
+test('interrupted_by_attack은 한글로 알리고 루프를 멈춘다', () => {
+  const it = interpretGatherResult({ ok: true, body: { error: 'interrupted_by_attack', gained: 12 } });
+  assert.equal(it.action, 'stop');
+  assert.match(it.message, /공격/);
+  assert.equal(it.gained, 12);
+});
+
+test('모르는 오류 코드도 영어 원문을 노출하지 않는다', () => {
+  const it = interpretGatherResult({ ok: false, kind: 'rejected', error: 'brand_new_code', message: 'Raw English message.' });
+  assert.match(it.message, /brand_new_code/);
+  assert.doesNotMatch(it.message, /Raw English/);
+});

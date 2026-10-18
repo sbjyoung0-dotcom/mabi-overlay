@@ -64,10 +64,21 @@
 
   const fmtDay = (ms) => { const d = new Date(ms); return `${d.getMonth() + 1}/${d.getDate()}`; };
 
+  // get_alterable_items / get_craftable_items 의 Reason 코드
+  const REASON_TEXT = {
+    queue_full: '큐가 가득 참',
+    not_enough_ingredient: '재료 부족',
+    ingredient_locked: '재료 잠김',
+    insufficient_facility_level: '시설 레벨 부족',
+    insufficient_living_skill_level: '생활 스킬 레벨 부족',
+    insufficient_decor_score: '데코 점수 부족',
+    insufficient_transfer_cost: '이송 비용 부족',
+  };
+
   // 재료가 부족할 때 "다른 캐릭터 어디에 있는지"를 확인창에 붙인다(저장된 스냅샷만 사용, CLI 추가 호출 없음).
   async function shortageWarn(kind, item) {
     const missing = item.MissingIngredients || [];
-    const head = `\n⚠ 지금은 ${kind} 불가${item.Reason ? ` (${item.Reason})` : ''}`;
+    const head = `\n⚠ 지금은 ${kind} 불가${item.Reason ? ` (${REASON_TEXT[item.Reason] || item.Reason})` : ''}`;
     if (missing.length === 0) return head;
     const r = await M.invoke(CH.ITEMS_LOCATE, { names: missing.map((m) => m.DisplayName) });
     const found = (r && r.found) || {};

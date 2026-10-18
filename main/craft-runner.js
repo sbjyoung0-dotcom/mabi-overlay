@@ -20,16 +20,21 @@ const MESSAGES = {
   facility_not_found: '시설 없음',
   blocked: '게임 화면 확인 필요',
   invalid_count: '한 번에 가능한 횟수를 넘었습니다',
+  queue_full: '제작 큐가 가득 참',
   timeout: '시간 초과로 중단됨',
   canceled: '다른 명령으로 대체됨',
   unknown_command: '게임이 이 명령을 지원하지 않습니다 — 게임 업데이트 확인',
 };
 
+function describe(reason) {
+  return MESSAGES[reason] || `처리 실패 (${reason})`;
+}
+
 function interpretCraftResult(r) {
   if (!r.ok) {
     if (r.kind === 'disconnected') return { ok: false, reason: 'disconnected', message: '게임 연결 끊김' };
     const reason = r.error || r.kind;
-    return { ok: false, reason, message: MESSAGES[reason] || r.message || reason };
+    return { ok: false, reason, message: describe(reason) };
   }
   const b = r.body || {};
   if (b.error === 'invalid_count') {
@@ -38,7 +43,7 @@ function interpretCraftResult(r) {
   if (b.error === 'blocked') {
     return { ok: false, reason: 'blocked', message: `게임 화면 확인 필요: ${b.kind || ''}`.trim() };
   }
-  if (b.error) return { ok: false, reason: b.error, message: MESSAGES[b.error] || b.message || b.error, cost: b.cost };
+  if (b.error) return { ok: false, reason: b.error, message: describe(b.error), cost: b.cost };
   // 사용자가 게임에서 직접 끝낸 것은 오류가 아니다(새로 만들어진 것도 없다).
   if (b.result === 'stopped_by_user') return { ok: false, reason: 'stopped_by_user', message: '게임에서 중단했습니다', cost: b.cost };
   return {

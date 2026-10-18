@@ -210,3 +210,32 @@ test('auto: 채집 루프(GATHER)가 잠금을 잡고 있으면 끝날 때까지
   release(); await hold; await p;
   assert.equal(calls.length, 2);
 });
+
+test('queue_full은 한글로 알리고, 자동 재가공을 실패로 세지 않는다 (일시적 상황)', async () => {
+  const { q, calls, config, events } = setup(
+    (command) => (command === 'complete_altering_work'
+      ? accepted({ collected: 1 })
+      : rejected({ error: 'queue_full', message: 'Altering requirements are not met; the error field says which.' })),
+    { alterFavorites: [{ displayName: '목재', count: 3, autoRequeue: true, collectThreshold: 1 }] },
+  );
+  const u = update([work('목재', '목재 가공 시설', true)]);
+  await q.handleWorksUpdate(u);
+  const last = events.at(-1);
+  assert.equal(last.type, 'skipped');
+  assert.match(last.message, /큐가 가득/);
+  assert.doesNotMatch(last.message, /[A-Za-z]{6,}/);      // 영어 원문이 새어나오지 않는다
+  assert.equal(config.get().alterFavorites[0].autoRequeue, true);  // 꺼지지 않는다
+
+  // 같은 상황이 세 번 반복돼도 자동 재가공은 유지된다
+  await q.handleWorksUpdate(u);
+  await q.handleWorksUpdate(u);
+  assert.equal(config.get().alterFavorites[0].autoRequeue, true);
+  assert.ok(calls.length >= 2);
+});
+
+test('모르는 오류 코드도 영어 원문 대신 한글로 보여준다', () => {
+  const it = interpretAlterResult({ ok: false, kind: 'rejected', error: 'brand_new_code', message: 'Some English sentence that users should not see.' });
+  assert.equal(it.ok, false);
+  assert.match(it.message, /brand_new_code/);
+  assert.doesNotMatch(it.message, /English sentence/);
+});
